@@ -57,15 +57,17 @@ phi_est <- CNN(nconvs = 2L,
 
 ## Compile model with decoder (non-synthetic, true likelihood)
 vae <- model_vae(phi_est, synthetic = FALSE, D_tf = D_tf)
-vae %>% compile(optimizer = 'adam')
 
 ## Load data
 train_images <- readRDS("data/train_images.rds")
 
 ## Train the model
+vae %>% compile(optimizer = 'adam')
 history <- vae %>% fit(train_images, 
                     epochs = 2L,
-                    shuffle = TRUE)
+                    shuffle = TRUE,
+                    batch_size = 128L)
+
 
 ## Load and predict with test images
 test_images <- readRDS("data/test_images.rds")

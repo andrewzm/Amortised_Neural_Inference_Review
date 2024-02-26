@@ -130,7 +130,6 @@ pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp())
 df_for_plot <- data.frame(l = as.numeric(grid_l), 
                             mu = as.numeric(pred_mean), 
                             sd = as.numeric(pred_sd))
-stop()
 
 test_summ_stat <- as.vector(test_summ_stat)
 save(test_summ_stat, df_for_plot, 

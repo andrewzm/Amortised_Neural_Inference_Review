@@ -67,6 +67,15 @@ simulator <- function(lscales_tf, D_sim_tf = NA) {
     return(Z_sims_tf)
 }
 
+## Generate microtest data for the images
+micro_test_lscales <- tf$constant(array(c(0.1, 0.3, 0.5), 
+                            dim = c(3L, 1L, 1L)),
+                            dtype = "float32")
+micro_test_images <- simulator(micro_test_lscales)
+saveRDS(micro_test_lscales %>% as.array(), file = "data/micro_test_lscales.rds")
+saveRDS(micro_test_images %>% as.array(), file = "data/micro_test_images.rds")
+
+
 ## Simulate in batches for efficiency
 for(i in 1:n_batch) {
     
@@ -107,12 +116,4 @@ saveRDS(train_lscales, file = "data/train_lscales.rds")
 saveRDS(val_lscales, file = "data/val_lscales.rds")
 saveRDS(test_lscales, file = "data/test_lscales.rds")
 
-
-## Generate microtest data for the images
-micro_test_lscales <- tf$constant(array(c(0.1, 0.3, 0.55), 
-                            dim = c(3L, 1L, 1L)),
-                            dtype = "float32")
-micro_test_images <- simulator(micro_test_lscales)
-saveRDS(micro_test_lscales %>% as.array(), file = "data/micro_test_lscales.rds")
-saveRDS(micro_test_images %>% as.array(), file = "data/micro_test_images.rds")
 
