@@ -43,6 +43,8 @@ g <- ggplot(quantiles_df) +
     geom_line(aes(quantiles, Est,  colour = Method)) +
     geom_abline(intercept = 0, slope = 1, col = "black") +
     xlab("Quantile") + ylab("Proportion of true length scale") +
+    scale_x_continuous(expand = c(0.01, 0.01)) + 
+    scale_y_continuous(expand = c(0.01, 0.01)) +
     theme_bw() +
     theme(text = element_text(size = 10),
           legend.title = element_blank()) +

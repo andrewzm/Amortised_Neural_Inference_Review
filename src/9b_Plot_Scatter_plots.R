@@ -41,6 +41,8 @@ g <- ggplot(point_summaries) +
     xlab("True length scale") + ylab("Estimated length scale") +
     theme_bw() +
     coord_fixed() +
+    scale_x_continuous(expand = c(0.01, 0.01)) + 
+    scale_y_continuous(expand = c(0.01, 0.01)) +
     theme(text = element_text(size = 7),
           legend.title = element_blank()) +
     facet_wrap(~Method)

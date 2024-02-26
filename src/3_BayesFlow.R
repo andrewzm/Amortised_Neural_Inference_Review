@@ -68,16 +68,20 @@ bayesflow_batch_size <- 32L         # Batch size for BF
 ## Fix BayesFlow RNG
 RNG = np$random$default_rng(2023L)
 
-## Prior on unknown parameter is U(0,0.6)
+## Prior on unknown parameter is N(0,1) -- note that after the 
+## normCDF transformation in the likelihood the implied prior is uniform on [0, 0.6]
 prior_fun <- function() 
-   RNG$uniform(low = 0.0, high = 0.6, size = 1L)    
+   RNG$normal(size = 1L)   
 prior = bf$simulation$Prior(prior_fun = prior_fun)
 
 ## Draw from this prior distribution to check it's working 
 prior(batch_size = 10L)
 
 ## Define the data simulator for BayesFlow
-likelihood_fun <- function(lscale) {
+likelihood_fun <- function(transformed_lscale) {
+
+    ## First transform the length-scale to be uniform on [0, 0.6]
+    lscale <- trans_normCDF_tf(transformed_lscale)
 
     ## Construct the covariance matrix and Cholesky factor for this parameter
     C_tf <- tf$exp(- D_tf / lscale)
@@ -175,12 +179,14 @@ test_micro_images <- readRDS("data/micro_test_images.rds")
 
 ## Posterior samples from BayesFlow on test cases
 BayesFlow_synth_samples <- amortizer$sample(list(summary_conditions = test_images), 
-                                   n_samples = 500L)
+                                   n_samples = 500L) %>% 
+                                   trans_normCDF()
 
 ## Posterior samples from BayesFlow on micro-test cases
 BayesFlow_synth_micro_samples <- amortizer$sample(list(summary_conditions = test_micro_images), 
-                                        n_samples = 500L)
+                                        n_samples = 500L) %>% 
+                                        trans_normCDF()
 
 
-saveRDS(BayesFlow_synth_samples, "output/BayesFlow_test.rds")
-saveRDS(BayesFlow_synth_micro_samples, "output/BayesFlow_micro_test.rds")
+saveRDS(BayesFlow_synth_samples %>% drop(), "output/BayesFlow_test.rds")
+saveRDS(BayesFlow_synth_micro_samples %>% drop(), "output/BayesFlow_micro_test.rds")
