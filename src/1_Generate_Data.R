@@ -1,7 +1,6 @@
 
 library(fields)
 library(dplyr)
-library(ggplot2)
 library("reticulate")
 use_condaenv("~/miniconda3/envs/BayesFlow")
 library(tensorflow)
@@ -15,7 +14,7 @@ nsim_per_batch <- 100L
 nsim_tot <- nsim_per_batch * n_batch
 nsim_train<- round(0.8 * nsim_tot)
 nsim_val <- round(0.1 * nsim_tot)
-nsim_test <- nsim_tot - nsim_training - nsim_val
+nsim_test <- nsim_tot - nsim_train - nsim_val
 
 ## Number of grid points
 ngrid <- 16L  
@@ -98,15 +97,22 @@ test_images <- Z_sims_tf[test_idx,,,] %>% as.array()
 
 train_lscales <- lscales_tf[train_idx,,] %>% as.array()
 val_lscales <- lscales_tf[val_idx,,] %>% as.array()
-test_lscales <- Z_sims_tf[test_idx,,,] %>% as.array()
+test_lscales <- lscales_tf[test_idx,,] %>% as.array()
 
-save("train_images", "val_images", "test_images", "train_lscales", "val_lscales", "test_lscales", 
-     file = "data/simulated_data.rda")
+saveRDS(train_images, file = "data/train_images.rds")
+saveRDS(val_images, file = "data/val_images.rds")
+saveRDS(test_images, file = "data/test_images.rds")
+
+saveRDS(train_lscales, file = "data/train_lscales.rds")
+saveRDS(val_lscales, file = "data/val_lscales.rds")
+saveRDS(test_lscales, file = "data/test_lscales.rds")
+
 
 ## Generate microtest data for the images
 micro_test_lscales <- tf$constant(array(c(0.1, 0.3, 0.55), 
                             dim = c(3L, 1L, 1L)),
                             dtype = "float32")
 micro_test_images <- simulator(micro_test_lscales)
-save("micro_test_lscales", "micro_test_images", file = "data/simulated_microtest_data.rda")
+saveRDS(micro_test_lscales %>% as.array(), file = "data/micro_test_lscales.rds")
+saveRDS(micro_test_images %>% as.array(), file = "data/micro_test_images.rds")
 

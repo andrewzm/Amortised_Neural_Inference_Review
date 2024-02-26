@@ -1,2 +1,39 @@
-src/BayesFlow_R_Example.R
-src/Complete_src_unpolished.R
+src/deprecated
+.Rhistory
+
+# LaTeX generated files to ignore
+*.aux
+*.bbl
+*.blg
+*.idx
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+*.fls
+*.log
+*.fdb_latexmk
+*.synctex.gz
+*.run.xml
+*.bcf
+
+# Output files
+*.pdf
+*.dvi
+
+# Editors/IDEs temporary files
+*.swp
+*~
+*.backup
+
+# Other files to ignore
+.DS_Store
