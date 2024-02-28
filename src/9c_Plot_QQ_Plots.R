@@ -19,12 +19,13 @@ library(ggplot2)
 library(tidyr)
 
 ## Plots for naive and MI-based summary statistics
-test_lscales <- readRDS("data/test_lscales.rds")
+test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
 preds <- list()
 
-for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
+for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
+                "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf")) {
-   preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
+   preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000,]
     
 }
 

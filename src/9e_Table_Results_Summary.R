@@ -21,8 +21,8 @@ library(gridExtra)
 library(xtable)
 
 ## Plots for naive and MI-based summary statistics
-test_lscales <- readRDS("data/test_lscales.rds")
-test_images <- readRDS("data/test_images.rds")
+test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
+test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 
 rmspe <- function(truth, est) {
   sqrt(mean((est - truth)^2))
@@ -53,9 +53,9 @@ crps <- function(z, samples) {
    mean()
 }
 preds <- results_crps <- NULL
-for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
-                "VB_Synthetic_MutualInf")) {
-   preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
+for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
+                "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
+   preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales), 
                                   drop(preds[[method]]))
 }
@@ -79,6 +79,9 @@ all_results$Upper <- lapply(preds,
                    data.frame() %>%
                    gather(Method, Upper) %>%
                    pull(Upper)
+
+ all_results$Method <- factor(all_results$Method, 
+                        levels = unique(all_results$Method))
 
 
 latex <- group_by(all_results, Method) %>%

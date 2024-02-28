@@ -34,9 +34,10 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 ## Find distance matrix for these grid points
 D <- fields::rdist(sgrid)
 
-## Load data
+## Load data (only max 1000 test images)
 test_images <- readRDS(paste0("data/", images_to_process, "_images.rds"))
-if(dim(test_images)[1] > 1000) test_images <- test_images[1:1000,,,,drop = FALSE]
+if(dim(test_images)[1] > 1000) 
+  test_images <- test_images[1:1000,,,,drop = FALSE]
 
 #########################################
 ########## Metropolis-Hastings ##########

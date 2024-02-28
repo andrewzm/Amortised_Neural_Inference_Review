@@ -18,21 +18,27 @@ library(ggplot2)
 library(tidyr)
 
 ## Plots for naive and MI-based summary statistics
-test_lscales <- readRDS("data/test_lscales.rds")
+test_lscales <- readRDS("data/test_lscales.rds")[1:1000,, ]
 preds <- list()
 
 ## NRE samples saved as numpy object, treat separately
 library(reticulate)
+use_condaenv("~/miniconda3/envs/BayesFlow")
 np <- import("numpy")
 NRE <- np$load("output/NRE_test.npy")
 # sample from the posterior...
 preds[["NRE"]] <- NRE
+preds[["NRE"]] <- rbind(preds[["NRE"]][1, ], preds[["NRE"]])
+## TODO, Fix the above, NRE needs to go to 1000
 
 ## Methods that sample from the posterior
-for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
+for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
+                "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
+   preds[[method]] <- preds[[method]][1:1000, ] # Only keep 1000 test points
 }
+
 point_summaries <- lapply(preds,
                           function(x) apply(x, 1, median)) %>%
                    data.frame() %>%
@@ -41,7 +47,7 @@ point_summaries <- lapply(preds,
 
 ## Add point summaries from Neural Bayes estimator
 NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate) 
-point_summaries <- bind_rows(point_summaries, NBE)
+point_summaries <- bind_rows(point_summaries, NBE[1:1000, ])
 
 ## Now make facet grid of scatter plots for each method
 ## with identity line
@@ -55,6 +61,6 @@ g <- ggplot(point_summaries) +
     scale_y_continuous(expand = c(0.01, 0.01)) +
     theme(text = element_text(size = 7),
           legend.title = element_blank()) +
-    facet_wrap(~Method)
+    facet_wrap(~Method, nrow = 2)
 
 ggsave("fig/scatter_plots.png", g, width = 7, height = 7)
