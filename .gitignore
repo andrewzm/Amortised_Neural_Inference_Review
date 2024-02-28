@@ -37,3 +37,4 @@ src/deprecated
 
 # Other files to ignore
 .DS_Store
+.Rproj.user

@@ -1,5 +1,4 @@
-# BayesFlow template R script: Estimation of length scale in Gaussian 
-# Process covariance function
+# Estimation of length scale in Gaussian Process covariance function
 #
 # Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
 # Date: 2024-02-15
@@ -22,16 +21,20 @@ library(tidyr)
 test_lscales <- readRDS("data/test_lscales.rds")
 preds <- list()
 
+## Methods that sample from the posterior
 for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
-    
 }
 point_summaries <- lapply(preds,
-                          function(x) apply(x, 1, mean)) %>%
+                          function(x) apply(x, 1, median)) %>%
                    data.frame() %>%
                    mutate(lscale_true = test_lscales) %>%
                    gather(Method, Est, -lscale_true)
+
+## Add point summaries from Neural Bayes estimator
+NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate) 
+point_summaries <- bind_rows(point_summaries, NBE)
 
 ## Now make facet grid of scatter plots for each method
 ## with identity line

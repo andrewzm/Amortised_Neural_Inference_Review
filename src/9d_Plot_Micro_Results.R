@@ -1,5 +1,4 @@
-# BayesFlow template R script: Estimation of length scale in Gaussian 
-# Process covariance function
+# Estimation of length scale in Gaussian Process covariance function
 #
 # Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
 # Date: 2024-02-15
@@ -19,7 +18,7 @@ library(ggplot2)
 library(tidyr)
 library("gridExtra")
 ## Plots for naive and MI-based summary statistics
-micro_test_lscales <- readRDS("data/micro_test_lscales.rds")
+micro_test_lscales <- round(readRDS("data/micro_test_lscales.rds"), 5)
 micro_test_images <- readRDS("data/micro_test_images.rds")
 
 ## Set up spatial grid on [0, 1] x [0, 1]
@@ -27,12 +26,16 @@ ngrid <- 16L                        # Number of grid points in each dimension
 s1 <- s2 <- seq(0, 1, length.out = ngrid)
 sgrid <- expand.grid(s1 = s1, s2 = s2)
 
+## Methods that sample from the posterior
 preds <- list()
 for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf", "Metropolis_Hastings")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_micro_test.rds"))
     
 }
+
+## Point summaries from Neural Bayes estimator
+NBE <- read.csv("output/NBE_micro_test.csv")
 
 zdf <- sgrid
 samples_all <- NULL
@@ -47,6 +50,10 @@ for(i in 1:3) {
 
 }
 zdf <- gather(zdf, sim, val, -s1, -s2)
+
+## Check point summaries for other methods:
+samples_all %>% group_by(lscale_true, Method) %>% summarise(Est = median(l))
+
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
       facet_grid(~sim) +
@@ -56,22 +63,20 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
                legend.position = "bottom") +
                coord_fixed()         
 
-   
-
-   density_plots <- ggplot(samples_all) + 
-               geom_density(aes(x = l, colour = Method), 
-                  alpha = 0.5) + 
-                  facet_wrap(~lscale_true, scales = "free_y") +
-              geom_vline(aes(xintercept = lscale_true), 
-                  linetype = "dashed", col = "black") +
-               xlab("Length scale") + 
-               ylab("Density") +
-               xlim(c(0, 0.6)) +
-               theme_bw() +
-               theme(text = element_text(size = 10),
-                     legend.title = element_blank(),
-                     legend.position = "bottom")
-   
+density_plots <- ggplot(samples_all) + 
+           geom_density(aes(x = l, colour = Method), alpha = 0.5) + 
+           geom_vline(data = NBE, aes(xintercept = estimate, colour = Method)) + 
+           facet_wrap(~lscale_true, scales = "free_y") +
+           geom_vline(aes(xintercept = lscale_true), 
+                     linetype = "dashed", col = "black") +
+           xlab("Length scale") + 
+           ylab("Density") +
+           xlim(c(0, 0.6)) +
+           theme_bw() +
+           theme(text = element_text(size = 10),
+                 legend.title = element_blank(),
+                 legend.position = "bottom")
+  
 
 g_all <- grid.arrange(grobs = list(spatplots, density_plots), ncol = 1)
 ggsave("fig/micro_test_plots.png", g_all, width = 7, height = 7)
