@@ -19,6 +19,10 @@ trans_normCDF <- function(x) {
     0.6 * pnorm(x)
 }
 
+trans_normCDF_inv <- function(x) {
+    qnorm(x/0.6)
+}
+
 trans_normCDF_tf <- function(x) {
         tf$multiply(tf$constant(0.6, dtype = "float32"), 
                                  dist$cdf(x))
@@ -114,6 +118,12 @@ model_vae <- new_model_class(
       self$total_loss_tracker
     )
   }),
+
+  call = function(inputs, training = FALSE) {
+    c(u_trans_mean, u_trans_log_sd) %<-% self$encoder(inputs)
+    u <- self$sampler(u_trans_mean, u_trans_log_sd)
+    return(u)
+  },
 
   train_step = function(data) {
     with(tf$GradientTape() %as% tape, {

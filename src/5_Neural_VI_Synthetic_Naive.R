@@ -73,7 +73,7 @@ summ_stat <- function(Z, D_mask, long = TRUE) {
 phi_est <- CNN(nconvs = 2L, 
                ngrid = ngrid, 
                kernel_sizes = c(3L, 3L),
-               filter_num = c(32L, 64L),
+               filter_num = c(64L, 128L),
                method = "VB")
 
 ## Binding function model with naive summ statistic (fully connected)
@@ -88,63 +88,98 @@ summ_stat_input <- layer_input(shape = c(1L,1L))
                         list(mean_summ_stat_net, log_sd_summ_stat_net))
 
 ## Train the binding function network
+cat("Loading data\n")
 train_images <- readRDS("data/train_images.rds")
 train_lscales <- readRDS("data/train_lscales.rds")
 test_images <- readRDS("data/test_images.rds")
 test_lscales <- readRDS("data/test_lscales.rds")
 
-train_summ_stat <- summ_stat(train_images %>% tf$constant(dtype = "float32"), 
+if(file.exists("data/naive_summary_statistics.rds")) {
+  cat("Loading naive summary statistics from file\n")
+  train_summ_stat <- readRDS("data/naive_summary_statistics.rds") %>%
+                     tf$constant(dtype = "float32")
+} else {
+   cat("Computing naive summary statistics\n")
+  train_summ_stat <- summ_stat(train_images %>% tf$constant(dtype = "float32"), 
                              D_mask_tf, long = FALSE)
+  saveRDS(as.array(train_summ_stat), "data/naive_summary_statistics.rds")
+}
 
+cat("Fitting the binding function network\n")
 synth_lik_est <- model_summnet(summ_stat_net)
-synth_lik_est %>% compile(optimizer = 'adam')
-history <- synth_lik_est %>% fit(train_lscales, 
-                            train_summ_stat, 
-                            epochs = 25,
-                            batch_size = 64L)
-synth_lik_est %>%  fit(train_lscales, 
-                        train_summ_stat,
-                        epochs = 25,
-                        batch_size = 2048L)
 
-## Save binding function data for plotting
-test_summ_stat <- summ_stat(test_images %>% tf$constant(dtype = "float32"), 
-                            D_mask_tf, long = FALSE) %>% as.array()
-grid_l <- tf$constant(matrix(seq(0, 0.6, by = 0.001)))
-pred_mean <- synth_lik_est$summ_stat_network$predict(grid_l)[[1]]
-pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp()) 
-df_for_plot <- data.frame(l = as.numeric(grid_l), 
-                            mu = as.numeric(pred_mean), 
-                            sd = as.numeric(pred_sd))
-save(test_summ_stat, df_for_plot, 
-        file = "output/VB_Synthetic_Naive_SummStat_data.rda")
 
-## Incorporate within VAE
-vae_synth <- model_vae(phi_est, 
-                    summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
-                    synthetic = TRUE,
-                    summ_stat_network = synth_lik_est$summ_stat_network)
-synth_lik_est$trainable <- FALSE
-synth_lik_est$summ_stat_network$trainable <- FALSE
+# Create a ModelCheckpoint callback
+checkpoint_callback <- callback_model_checkpoint(
+                              filepath = "./ckpts/NVI_Synth_Naive/checkpoint_epoch_{epoch}.hdf5",
+                              save_weights_only = TRUE,
+                              save_freq = 1, # Save after every epoch
+                              verbose = 0)
 
-## Train the VAE
-vae_synth %>% compile(
-               optimizer = optimizer_adam(
-                              learning_rate = 0.0001))
-  
-history <- vae_synth %>% fit(train_images, 
-              epochs = 5L, 
-              shuffle = TRUE,
-              batch_size = 2048)
+if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")) {
+   synth_lik_est %>% compile(optimizer = 'adam')
+   vae_synth <- model_vae(phi_est, 
+                      summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
+                      synthetic = TRUE,
+                      summ_stat_network = synth_lik_est$summ_stat_network)
+    vae_synth %>% compile(optimizer = 'adam')
+    dummy <- vae_synth(train_images[1:2,,,]) # Just to initialise network
+    vae_synth %>% load_model_weights_hdf5("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")
+} else {
 
-vae_synth %>% compile(optimizer = 
-                    optimizer_adam(
-                        learning_rate = 0.001))
+  synth_lik_est %>% compile(optimizer = 'adam')
+  history <- synth_lik_est %>% fit(train_lscales, 
+                              train_summ_stat, 
+                              epochs = 10,
+                              batch_size = 64L)
+  synth_lik_est %>%  fit(train_lscales, 
+                          train_summ_stat,
+                          epochs = 10,
+                          batch_size = 2048L)
 
-vae_synth %>% fit(train_images, 
-            epochs = 5L, 
-            shuffle = TRUE,
-            batch_size = 2048)
+  ## Save binding function data for plotting
+  test_summ_stat <- summ_stat(test_images %>% tf$constant(dtype = "float32"), 
+                              D_mask_tf, long = FALSE) %>% as.array()
+  grid_l <- tf$constant(matrix(seq(0, 0.6, by = 0.001)))
+  pred_mean <- synth_lik_est$summ_stat_network$predict(grid_l)[[1]]
+  pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp()) 
+  df_for_plot <- data.frame(l = as.numeric(grid_l), 
+                              mu = as.numeric(pred_mean), 
+                              sd = as.numeric(pred_sd))
+  save(test_summ_stat, df_for_plot, 
+          file = "output/VB_Synthetic_Naive_SummStat_data.rda")
+
+  ## Incorporate within VAE
+  cat("Incorporating binding function within VAE\n")
+  vae_synth <- model_vae(phi_est, 
+                      summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
+                      synthetic = TRUE,
+                      summ_stat_network = synth_lik_est$summ_stat_network)
+  synth_lik_est$trainable <- FALSE
+  synth_lik_est$summ_stat_network$trainable <- FALSE
+
+    cat("Training the VAE\n")
+    vae_synth %>% compile(
+                  optimizer = optimizer_adam(
+                                  learning_rate = 0.0001))
+      
+    history <- vae_synth %>% fit(train_images, 
+                  epochs = 5L, 
+                  shuffle = TRUE,
+                  batch_size = 2048,
+                  callbacks = list(checkpoint_callback))
+
+    vae_synth %>% compile(optimizer = 
+                        optimizer_adam(
+                            learning_rate = 0.001),)
+
+    vae_synth %>% fit(train_images, 
+                epochs = 5L, 
+                shuffle = TRUE,
+                batch_size = 2048,
+                callbacks = list(checkpoint_callback))
+}
+
   
 ## Testing with full test data
 pred_VB_trans_mean <- vae_synth$encoder$predict(test_images)[[1]]

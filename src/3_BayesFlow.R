@@ -68,62 +68,12 @@ bayesflow_batch_size <- 32L         # Batch size for BF
 ## Fix BayesFlow RNG
 RNG = np$random$default_rng(2023L)
 
-## Prior on unknown parameter is N(0,1) -- note that after the 
-## normCDF transformation in the likelihood the implied prior is uniform on [0, 0.6]
-prior_fun <- function() 
-   RNG$normal(size = 1L)   
-prior = bf$simulation$Prior(prior_fun = prior_fun)
-
-## Draw from this prior distribution to check it's working 
-prior(batch_size = 10L)
-
-## Define the data simulator for BayesFlow
-likelihood_fun <- function(transformed_lscale) {
-
-    ## First transform the length-scale to be uniform on [0, 0.6]
-    lscale <- trans_normCDF_tf(transformed_lscale)
-
-    ## Construct the covariance matrix and Cholesky factor for this parameter
-    C_tf <- tf$exp(- D_tf / lscale)
-    L_tf <- tf$linalg$cholesky(C_tf)
-
-    ## Generate the N(0, 1) random variables
-    eta_sim <- array(rnorm(ngrid^2),
-                    dim = c(ngrid^2, 1L))
-
-    ## Convert to TensorFlow
-    eta_tf <- tf$constant(eta_sim, dtype = "float32")
-
-    ## Generate the simulations by multiplying the Cholesky factor with the N(0, 1) random variables
-    Z_sims_long_tf <- tf$linalg$matmul(L_tf, eta_tf)
-    Z_sims_tf <- tf$reshape(Z_sims_long_tf,
-                            c(ngrid, ngrid))
-}
-
-## Set up the simulator in BayesFlow
-simulator <- bf$simulation$Simulator(simulator_fun = likelihood_fun)
-
-## Set up the data simulation model in BayesFlow (prior + simulator)
-model <- bf$simulation$GenerativeModel(prior = prior, simulator = simulator)
-
-## Draw from the simulator to check it's working (check shapes)
-out <- model(batch_size=3L)
-print(paste0("Shape of sim_data: ", paste(dim(out$"sim_data"), collapse = " ")))
-
 ## Set up the summary network
 summary_net <- CNN(nconvs = 2L, 
                   ngrid = ngrid, 
                   kernel_sizes = c(3L, 3L),
                   filter_num = c(64L, 128L),
                   output_dims = 1L)
-
-## Test summary network (sizes, etc.)
-test_inp = model(batch_size = 4L)
-summary_rep = as.array(summary_net(test_inp$"sim_data"))
-print("Shape of simulated data sets: ")
-dim(test_inp$"sim_data")
-print("Shape of summary vectors: ")
-dim(summary_rep)
 
 ## For the inference network use an INN
 inference_net <- bf$networks$InvertibleNetwork(
@@ -133,45 +83,39 @@ inference_net <- bf$networks$InvertibleNetwork(
                              dropout = FALSE)
 )
 
-## Test and see whether the inference network is functioning as it should
-c(z, log_det_J) %<-% inference_net(test_inp$prior_draws, summary_rep)
-print("Shape of latent variables:")
-dim(as.array(z))
-print("Shape of log det Jacobian:")
-dim(as.array(log_det_J))
+## Load data
+train_images <- readRDS("data/train_images.rds") %>% drop()
+train_lscales <- readRDS("data/train_lscales.rds") %>% drop() %>% as.matrix()
+val_images <- readRDS("data/val_images.rds") %>% drop()
+val_lscales <- readRDS("data/val_lscales.rds") %>% drop() %>% as.matrix()
 
 ## Set up the amortizer in BayesFlow
-amortizer = bf$amortizers$AmortizedPosterior(inference_net, summary_net)
-trainer = bf$trainers$Trainer(amortizer = amortizer, generative_model = model)
+simulation_dict <- list(sim_data = train_images,
+                        prior_draws = trans_normCDF_inv(train_lscales))
+validation_dict <- list(sim_data = val_images,
+                         prior_draws = trans_normCDF_inv(val_lscales))
 
-## See what is contained in output of simulator
-out = model(3L)
-print("Keys of simulated dict: ")
-names(out)
+amortizer = bf$amortizers$AmortizedPosterior(inference_net, 
+                                             summary_net)
+trainer = bf$trainers$Trainer(amortizer = amortizer, 
+                              checkpoint_path = "ckpts/BayesFlow/")
 
-## See what is contained in output of trainer
-conf_out <- trainer$configurator(out)
-print("Keys of configured dict: ")
-print(names(conf_out))
-
-## Train the network
-history = trainer$train_online(epochs = bayesflow_epochs, 
-                               iterations_per_epoch = bayesflow_iterations, 
-                               batch_size = bayesflow_batch_size, 
-                               validation_sims = 200L)
-
-## Plot history of training + validation
-plot(history$"train_losses"[,1])
-val_points <- seq(bayesflow_iterations, 
-                  bayesflow_iterations * bayesflow_epochs, 
-                  length.out = bayesflow_epochs)
-lines(val_points, history$"val_losses"[,1], 
-col = "red", 
-lwd = 3)
+if(!is.null(trainer$manager$latest_checkpoint)) {
+  cat("Loading pre-trained network...\n")
+  history = trainer$load_pretrained_network()
+} else {
+  cat("Training the network...\n")
+  history = trainer$train_offline(simulations_dict = simulation_dict,
+                                epochs = bayesflow_epochs, 
+                                batch_size = bayesflow_batch_size, 
+                                validation_sims = validation_dict)
+}
 
 ##############################################
 ########## Simulate test cases ###############
 ##############################################
+
+cat("Applying to test data...\n")
 
 ## Run the amortizer on test data
 test_images <- readRDS("data/test_images.rds")
@@ -187,6 +131,6 @@ BayesFlow_synth_micro_samples <- amortizer$sample(list(summary_conditions = test
                                         n_samples = 500L) %>% 
                                         trans_normCDF()
 
-
+cat("Saving results...\n")
 saveRDS(BayesFlow_synth_samples %>% drop(), "output/BayesFlow_test.rds")
 saveRDS(BayesFlow_synth_micro_samples %>% drop(), "output/BayesFlow_micro_test.rds")

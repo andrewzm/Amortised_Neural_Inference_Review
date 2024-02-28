@@ -47,5 +47,4 @@ g <- ggplot(point_summaries) +
           legend.title = element_blank()) +
     facet_wrap(~Method)
 
-
 ggsave("fig/scatter_plots.png", g, width = 7, height = 7)

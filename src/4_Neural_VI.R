@@ -52,7 +52,7 @@ D_tf <- tf$expand_dims(tf$constant(D,
 phi_est <- CNN(nconvs = 2L, 
                ngrid = ngrid, 
                kernel_sizes = c(3L, 3L),
-               filter_num = c(32L, 64L),
+               filter_num = c(64L, 128L),
                method = "VB")
 
 ## Compile model with decoder (non-synthetic, true likelihood)
@@ -61,12 +61,28 @@ vae <- model_vae(phi_est, synthetic = FALSE, D_tf = D_tf)
 ## Load data
 train_images <- readRDS("data/train_images.rds")
 
+# Create a ModelCheckpoint callback
+checkpoint_callback <- callback_model_checkpoint(
+                              filepath = "./ckpts/NVI/checkpoint_epoch_{epoch}.hdf5",
+                              save_weights_only = TRUE,
+                              save_freq = 1, # Save after every epoch
+                              verbose = 0)
+
 ## Train the model
-vae %>% compile(optimizer = 'adam')
-history <- vae %>% fit(train_images, 
-                    epochs = 2L,
-                    shuffle = TRUE,
-                    batch_size = 128L)
+
+if(file.exists("./ckpts/NVI/checkpoint_epoch_2.hdf5")) {
+    vae %>% compile(optimizer = 'adam')
+    dummy <- vae(train_images[1:2,,,]) # Just to initialise network
+    vae %>% load_model_weights_hdf5("./ckpts/NVI/checkpoint_epoch_2.hdf5")
+} else {
+    vae %>% compile(optimizer = 'adam')
+    history <- vae %>% fit(train_images, 
+                        epochs = 2L,
+                        shuffle = TRUE,
+                        #batch_size = 128L, 
+                        batch_size = 32L, 
+                        callbacks = list(checkpoint_callback))
+}
 
 
 ## Load and predict with test images
@@ -77,7 +93,6 @@ VB_samples <- rnorm(n = 500 * dim(test_images)[1],
                 pred_VB_trans_mean, 
                 pred_VB_trans_sd) %>%
             matrix(ncol = 500L) %>% trans_sigmoid()
-
 
 ## Load and predict with microtest images
 test_micro_images <- readRDS("data/micro_test_images.rds")

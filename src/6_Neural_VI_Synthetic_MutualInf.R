@@ -58,10 +58,18 @@ D_mask_tf <- ((D_tf < (mean(diff(s1))*1.1)) %>%
 ## Summary Statistic extraction using MI #####
 ##############################################
 
+## Load the data
+train_images <- readRDS("data/train_images.rds") %>% tf$constant(dtype = "float32")
+train_lscales <- readRDS("data/train_lscales.rds") %>% tf$constant(dtype = "float32")
+test_images <- readRDS("data/test_images.rds") %>% tf$constant(dtype = "float32")
+test_lscales <- readRDS("data/test_lscales.rds") %>% tf$constant(dtype = "float32")
+
+
+## Set up the summary network
 Snet <-  CNN(nconvs = 2L, 
             ngrid = ngrid, 
             kernel_sizes = c(3L, 3L),
-            filter_num = c(32L, 64L))
+            filter_num = c(64L, 128L))
 
 Tnet_input <- layer_input(shape = c(2L)) %>%
     layer_batch_normalization()
@@ -71,12 +79,6 @@ Tdense_layer2 <- layer_dense(Tdense_layer1, 16L) %>%
     layer_activation_leaky_relu() 
 T_output <- layer_dense(Tdense_layer2, 1L)
 Tnet <- keras_model(Tnet_input, T_output)
-
-## Train the summary statistic network
-train_images <- readRDS("data/train_images.rds") %>% tf$constant(dtype = "float32")
-train_lscales <- readRDS("data/train_lscales.rds") %>% tf$constant(dtype = "float32")
-test_images <- readRDS("data/test_images.rds") %>% tf$constant(dtype = "float32")
-test_lscales <- readRDS("data/test_lscales.rds") %>% tf$constant(dtype = "float32")
 
 train_output_shuffled <- tf$random$shuffle(train_lscales, 0L)
 MIest <- model_MINet(S_net = Snet, T_net = Tnet)
@@ -143,7 +145,7 @@ save(test_summ_stat, df_for_plot,
 phi_est <- CNN(nconvs = 2L, 
                ngrid = ngrid, 
                kernel_sizes = c(3L, 3L),
-               filter_num = c(32L, 64L),
+               filter_num = c(64L, 128L),
                method = "VB")
 
 vae_synth <- model_vae(phi_est, 
