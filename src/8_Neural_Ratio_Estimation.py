@@ -37,17 +37,19 @@ micro_test_images  = loaddata("data/micro_test_images.rds")
 embedding_net = CNNEmbedding(input_shape = (16, 16))
 classifier = utils.classifier_nn(model="mlp", embedding_net_x = embedding_net, hidden_features=10)
 
-if torch.cuda.is_available():
-    device="cuda:0"
-else:
-    device="cpu:0"
+## found that the GPU did not speed things up, so stick with the cpu
+# if torch.cuda.is_available():
+#     device="cuda:0"
+# else:
+#     device="cpu:0"
 
 # Prior
 p = 1 # number of parameters
-prior = utils.BoxUniform(low=torch.zeros(p, device=device), high=0.6 * torch.ones(p, device=device))
+# prior = utils.BoxUniform(low=torch.zeros(p, device=device), high=0.6 * torch.ones(p, device=device))
+prior = utils.BoxUniform(low=torch.zeros(p), high=0.6 * torch.ones(p))
 
 # Instantiate the inference object
-inference = SNRE_A(prior, classifier = classifier, device = device)
+inference = SNRE_A(prior, classifier = classifier) #, device = device)
 
 # Add simulations to inference object
 inference = inference.append_simulations(train_lscales, train_images)
@@ -61,14 +63,18 @@ posterior = inference.build_posterior(ratio_estimator, prior = prior)
 
 # Save the amortised posterior object
 Path("ckpts/NRE").mkdir(parents=True, exist_ok=True)
-with open("ckpts/NRE/trained_estimator.pkl", "wb") as handle:
-    pickle.dump(posterior, handle)
+file = open("ckpts/NRE/trained_estimator.pkl", "wb")
+pickle.dump(posterior, file)
+file.close()
 
 # Load the amortised posterior object
+# file = open("ckpts/NRE/trained_estimator.pkl", "rb")
+# posterior = pickle.load(file)
+# file.close()
 
 
 # Function to MCMC sample from the posterior given a set of images
-def sample(posterior, images, num_samples = 100):
+def sample(posterior, images, num_samples = 500):
     images  = np.split(images, images.shape[0]) # split 4D array into list of arrays
     samples = map(lambda x: posterior.sample((num_samples,), x = x), images)
     samples = list(samples)
@@ -112,5 +118,5 @@ micro_test_samples = sample(posterior, micro_test_images, num_samples = 500)
 np.save("output/NRE_micro_test.npy", micro_test_samples)
 
 # Test set
-test_density = density(posterior, test_images)
+test_density = density(posterior, test_images[1:1000, :, :, :])
 np.save("output/NRE_test.npy", test_density)

@@ -85,10 +85,10 @@ g = Compress(0.0, 0.6) # optional function to ensure estimates fall within the p
 mkpath("ckpts/NBE")
 point_estimator = Flux.state(θ̂)
 quantile_estimator = Flux.state(θ̂₂)
-@save "ckpts/NBE_trained_estimators.bson" point_estimator quantile_estimator
+@save "ckpts/NBE/trained_estimators.bson" point_estimator quantile_estimator
 
 # Load the saved estimators
-@load "ckpts/NBE_trained_estimators.bson" point_estimator quantile_estimator
+@load "ckpts/NBE/trained_estimators.bson" point_estimator quantile_estimator
 Flux.loadmodel!(θ̂, point_estimator)
 Flux.loadmodel!(θ̂₂, quantile_estimator)
 

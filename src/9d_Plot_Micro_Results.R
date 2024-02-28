@@ -34,6 +34,11 @@ for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive",
     
 }
 
+## NRE samples saved as numpy object, treat separately
+library(reticulate)
+np <- import("numpy")
+preds[["NRE"]] <- np$load("output/NRE_micro_test.npy")
+
 ## Point summaries from Neural Bayes estimator
 NBE <- read.csv("output/NBE_micro_test.csv")
 
@@ -51,7 +56,7 @@ for(i in 1:3) {
 }
 zdf <- gather(zdf, sim, val, -s1, -s2)
 
-## Check point summaries for other methods:
+## point summaries for other methods:
 samples_all %>% group_by(lscale_true, Method) %>% summarise(Est = median(l))
 
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
@@ -77,6 +82,5 @@ density_plots <- ggplot(samples_all) +
                  legend.title = element_blank(),
                  legend.position = "bottom")
   
-
 g_all <- grid.arrange(grobs = list(spatplots, density_plots), ncol = 1)
 ggsave("fig/micro_test_plots.png", g_all, width = 7, height = 7)

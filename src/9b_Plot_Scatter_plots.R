@@ -21,6 +21,13 @@ library(tidyr)
 test_lscales <- readRDS("data/test_lscales.rds")
 preds <- list()
 
+## NRE samples saved as numpy object, treat separately
+library(reticulate)
+np <- import("numpy")
+NRE <- np$load("output/NRE_test.npy")
+# sample from the posterior...
+preds[["NRE"]] <- NRE
+
 ## Methods that sample from the posterior
 for(method in c("BayesFlow", "VB", "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf")) {
