@@ -29,6 +29,8 @@ for(method in c("Metropolis_Hastings", "BayesFlow", "VB",
     
 }
 
+
+
 quantile_grid <- seq(0, 1, by = 0.05)
 quantiles <- lapply(preds,
                       function(method_results) {

@@ -21,15 +21,10 @@ library(tidyr)
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,, ]
 preds <- list()
 
-## NRE samples saved as numpy object, treat separately
-library(reticulate)
-use_condaenv("~/miniconda3/envs/BayesFlow")
-np <- import("numpy")
-NRE <- np$load("output/NRE_test.npy")
-# sample from the posterior...
+## NRE output stores the estimated posterior density rather than posterior samples
+NRE <- readRDS(paste0("output/NRE_test.rds"))
+# TODO sample from the posterior... 
 preds[["NRE"]] <- NRE
-preds[["NRE"]] <- rbind(preds[["NRE"]][1, ], preds[["NRE"]])
-## TODO, Fix the above, NRE needs to go to 1000
 
 ## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 

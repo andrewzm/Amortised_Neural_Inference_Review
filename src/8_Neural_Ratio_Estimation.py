@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import pickle # saving the trained estimator
 import time
-from rpy2.robjects import r # used to load the data for the Gaussian-process example
+from rpy2.robjects import r, numpy2ri # used to load and save the data
 from pathlib import Path
 from sbi import utils as utils
 from sbi.inference import simulate_for_sbi
@@ -21,6 +21,8 @@ def loaddata(file_path):
     torch_array = torch.from_numpy(np_array)
     torch_array = torch_array.float()
     return torch_array
+
+
 
 train_images  = loaddata("data/train_images.rds")
 val_images    = loaddata("data/val_images.rds")
@@ -72,7 +74,6 @@ file.close()
 # posterior = pickle.load(file)
 # file.close()
 
-
 # Function to MCMC sample from the posterior given a set of images
 def sample(posterior, images, num_samples = 500):
     images  = np.split(images, images.shape[0]) # split 4D array into list of arrays
@@ -98,25 +99,41 @@ def density(posterior, images, steps = 250):
     pdf = list(pdf)
     pdf = torch.stack(pdf)
     pdf = torch.Tensor.cpu(pdf)
-    pdf.numpy()
+    pdf = pdf.numpy()
     return pdf
 
-t0 = time.time()
-pdf = density(posterior, micro_test_images)
-t1 = time.time()
-t = t1-t0
+#t0 = time.time()
+#pdf = density(posterior, micro_test_images)
+#t1 = time.time()
+#t = t1-t0
 
-t0 = time.time()
-pdf = sample(posterior, micro_test_images)
-t1 = time.time()
-t = t1-t0
+#t0 = time.time()
+#samples = sample(posterior, micro_test_images)
+#t1 = time.time()
+#t = t1-t0
 
 # Micro test set
 # micro_test_density = density(posterior, micro_test_images)
 # np.save("output/NRE_micro_test.npy", micro_test_density)
-micro_test_samples = sample(posterior, micro_test_images, num_samples = 500)
-np.save("output/NRE_micro_test.npy", micro_test_samples)
+micro_test_samples = sample(posterior, micro_test_images)
 
 # Test set
-test_density = density(posterior, test_images[1:1000, :, :, :])
-np.save("output/NRE_test.npy", test_density)
+test_density = density(posterior, test_images[0:1000, :, :, :])
+
+# Save output: .npy objects
+# np.save("output/NRE_micro_test.npy", micro_test_samples)
+# np.save("output/NRE_test.npy", test_density)
+
+# Save output: .rds objects
+# Enable automatic conversion of numpy arrays to R objects
+numpy2ri.activate()
+# Function to save numpy array as RDS file
+def save_numpy_as_rds(np_array, file_path):
+    # Convert numpy array to an R matrix
+    r_matrix = r.matrix(np_array, nrow=np_array.shape[0], ncol=np_array.shape[1])
+    # Save the R matrix as an RDS file
+    r['saveRDS'](r_matrix, file_path)
+    return r_matrix
+
+save_numpy_as_rds(micro_test_samples, "output/NRE_micro_test.rds")
+save_numpy_as_rds(test_density, "output/NRE_test.rds")

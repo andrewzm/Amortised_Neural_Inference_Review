@@ -30,16 +30,10 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 preds <- list()
 for(method in c( "Metropolis_Hastings", "BayesFlow", 
                 "VB", "VB_Synthetic_Naive", 
-                "VB_Synthetic_MutualInf")) {
+                "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_micro_test.rds"))
     
 }
-
-## NRE samples saved as numpy object, treat separately
-library(reticulate)
-use_condaenv("~/miniconda3/envs/BayesFlow")
-np <- import("numpy")
-preds[["NRE"]] <- np$load("output/NRE_micro_test.npy")
 
 ## Point summaries from Neural Bayes estimator
 NBE <- read.csv("output/NBE_micro_test.csv")
