@@ -86,43 +86,41 @@ def sample(posterior, images, num_samples = 500):
     return samples
 
 #Function to evaluate the posterior density given a single image
-def density_single_image(posterior, x, steps):
-    theta_list = torch.linspace(0, 0.6, steps = steps)
-    pdf = map(lambda theta: torch.exp(posterior.log_prob(theta,  x = x)), theta_list)
+def density_single_image(posterior, x, theta_grid):
+    pdf = map(lambda theta: torch.exp(posterior.log_prob(theta,  x = x)), theta_grid)
     pdf = list(pdf)
     pdf = torch.cat(pdf)
     return pdf
 
 # Function to evaluate the posterior density given a set of images
-def density(posterior, images, steps = 250):
-    pdf = map(lambda x: density_single_image(posterior, x, steps = steps), images)
+def density(posterior, images, theta_grid):
+    pdf = map(lambda x: density_single_image(posterior, x, theta_grid = theta_grid), images)
     pdf = list(pdf)
     pdf = torch.stack(pdf)
     pdf = torch.Tensor.cpu(pdf)
     pdf = pdf.numpy()
     return pdf
 
+theta_grid = torch.linspace(0, 0.6, steps = 750)
+
 #t0 = time.time()
-#pdf = density(posterior, micro_test_images)
+#pdf = density(posterior, micro_test_images, theta_grid)
 #t1 = time.time()
-#t = t1-t0
+#t = t1-t0 # 0.0003 seconds
 
 #t0 = time.time()
 #samples = sample(posterior, micro_test_images)
 #t1 = time.time()
-#t = t1-t0
+#t = t1-t0 # 24 seconds
 
-# Micro test set
-# micro_test_density = density(posterior, micro_test_images)
-# np.save("output/NRE_micro_test.npy", micro_test_density)
-micro_test_samples = sample(posterior, micro_test_images)
+# Find that evaluating the posterior density is much faster than MCMC sampling.
+# Since we're considering a single-parameter model, we can estimate the density
+# and use inverse-transform sampling, or similar, to generate samples from the
+# posterior. This sampling will be done in a separate R script from convenience.
 
-# Test set
-test_density = density(posterior, test_images[0:1000, :, :, :])
-
-# Save output: .npy objects
-# np.save("output/NRE_micro_test.npy", micro_test_samples)
-# np.save("output/NRE_test.npy", test_density)
+# Evaluate over test sets
+micro_test_density = density(posterior, micro_test_images, theta_grid)
+test_density = density(posterior, test_images[0:1000, :, :, :], theta_grid)
 
 # Save output: .rds objects
 # Enable automatic conversion of numpy arrays to R objects
@@ -130,10 +128,19 @@ numpy2ri.activate()
 # Function to save numpy array as RDS file
 def save_numpy_as_rds(np_array, file_path):
     # Convert numpy array to an R matrix
-    r_matrix = r.matrix(np_array, nrow=np_array.shape[0], ncol=np_array.shape[1])
+    if np_array.ndim == 1:
+        r_matrix = r.matrix(np_array, nrow=np_array.shape[0], ncol=1)
+    else:
+        r_matrix = r.matrix(np_array, nrow=np_array.shape[0], ncol=np_array.shape[1])
     # Save the R matrix as an RDS file
     r['saveRDS'](r_matrix, file_path)
     return r_matrix
 
-save_numpy_as_rds(micro_test_samples, "output/NRE_micro_test.rds")
-save_numpy_as_rds(test_density, "output/NRE_test.rds")
+save_numpy_as_rds(theta_grid.numpy(), "output/NRE_theta_grid.rds")
+save_numpy_as_rds(micro_test_density, "output/NRE_micro_test_density.rds")
+save_numpy_as_rds(test_density, "output/NRE_test_density.rds")
+
+
+# Save output: .npy objects
+# np.save("output/NRE_micro_test.npy", micro_test_samples)
+# np.save("output/NRE_test.npy", test_density)

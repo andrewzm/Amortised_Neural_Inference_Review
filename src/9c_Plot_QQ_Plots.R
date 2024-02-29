@@ -24,7 +24,7 @@ preds <- list()
 
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
                 "VB_Synthetic_Naive", 
-                "VB_Synthetic_MutualInf")) {
+                "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000,]
     
 }

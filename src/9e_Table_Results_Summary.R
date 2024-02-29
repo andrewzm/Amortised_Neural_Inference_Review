@@ -54,7 +54,7 @@ crps <- function(z, samples) {
 }
 preds <- results_crps <- NULL
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
-                "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
+                "VB_Synthetic_MutualInf", "VB_Synthetic_Naive", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales), 
                                   drop(preds[[method]]))
