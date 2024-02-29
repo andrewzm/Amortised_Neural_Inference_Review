@@ -54,7 +54,7 @@ D_mask_tf <- ((D_tf < (mean(diff(s1))*1.1)) %>%
               tf$where(1L, 0L) %>%
               tf$cast("float32"))
 
-## "Naive" summary statistic: sum of squared differences between neighbours
+## "Naive" summary statistic: mean of squared differences between neighbours
 summ_stat <- function(Z, D_mask, long = TRUE) {
   if(long == FALSE) {
     Z_long <- tf$reshape(Z, c(-1L, ngrid_squared, 1L))
