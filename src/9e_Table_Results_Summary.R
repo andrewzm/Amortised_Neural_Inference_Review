@@ -53,17 +53,18 @@ crps <- function(z, samples) {
    mean()
 }
 preds <- results_crps <- NULL
+
+## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
                 "VB_Synthetic_MutualInf", "VB_Synthetic_Naive", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales), 
                                   drop(preds[[method]]))
 }
-results_crps <- data.frame(results_crps) %>%
-                gather(Method, CRPS)
+results_crps <- data.frame(results_crps) %>% gather(Method, CRPS)
 
 all_results <- lapply(preds,
-                          function(x) apply(x, 1, mean)) %>%
+                          function(x) apply(x, 1, median)) %>%
                    data.frame() %>%
                    mutate(lscale_true = test_lscales) %>%
                    gather(Method, Est, -lscale_true)
@@ -80,9 +81,13 @@ all_results$Upper <- lapply(preds,
                    gather(Method, Upper) %>%
                    pull(Upper)
 
- all_results$Method <- factor(all_results$Method, 
-                        levels = unique(all_results$Method))
+all_results$Method <- factor(all_results$Method, 
+                             levels = unique(all_results$Method))
+ 
 
+NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate, Lower = lower, Upper = upper) 
+NBE <- NBE[1:1000, ] 
+all_results <- bind_rows(all_results, NBE)
 
 latex <- group_by(all_results, Method) %>%
   summarise(rmspe = rmspe(lscale_true, Est),

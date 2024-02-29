@@ -52,17 +52,28 @@ micro_test_lscales = loadparameters("micro_test_lscales")
 
 p = 1 # number of parameters in the statistical model
 
+
+# Summary network
+# ψ = Chain(
+# 	Conv((3, 3), 1 => 32, relu),
+# 	MaxPool((2, 2)),
+# 	Conv((3, 3),  32 => 64, relu),
+# 	MaxPool((2, 2)),
+# 	Flux.flatten
+# 	)
+#
+# # Inference network
+# ϕ = Chain(Dense(256, 64, leakyrelu), Dense(64, p))
+
 # Summary network
 ψ = Chain(
-	Conv((3, 3), 1 => 32, relu),
-	MaxPool((2, 2)),
-	Conv((3, 3),  32 => 64, relu),
-	MaxPool((2, 2)),
+	Conv((5, 5), 1 => 6, relu),
+	Conv((5, 5),  6 => 12, relu),
 	Flux.flatten
 	)
 
 # Inference network
-ϕ = Chain(Dense(256, 64, leakyrelu), Dense(64, p))
+ϕ = Chain(Dense(768, 50, relu), Dense(50, 50, relu), Dense(50, p))
 
 # DeepSet
 architecture = DeepSet(ψ, ϕ)
@@ -70,8 +81,22 @@ architecture = DeepSet(ψ, ϕ)
 # Initialise point estimator and posterior credible-interval estimator
 g = Compress(0.0, 0.6) # optional function to ensure estimates fall within the prior support
 θ̂ = PointEstimator(architecture, g)
-θ̂₂ = IntervalEstimator(architecture, g; probs = [0.05, 0.95])
+θ̂₂ = IntervalEstimator(architecture; probs = [0.05, 0.95])
 # TODO quantile estimator for 30 probability levels
+
+
+# Example data: one independent replicate
+Z = rand(Float32, 16, 16, 1, 1)
+θ̂(Z)
+
+# Example data: five independent replicates
+Z = rand(Float32, 16, 16, 1, 5)
+θ̂(Z)
+
+# Example data: two data sets, with five and ten independent replicates respectively
+Z = [rand(Float32, 16, 16, 1, n) for n in [5, 10]]
+θ̂(Z)
+
 
 # ---- Train the estimators ----
 
@@ -131,7 +156,6 @@ CSV.write("output/NBE_test.csv", estimates_test)
 
 
 ## Bootstrap
-
 function simulate(θ, m = 1)
 
 	# Spatial locations
@@ -156,7 +180,7 @@ end
 
 function parametricbootstrap(θ̂, Z; B = 1000)
 	point_estimate = θ̂(Z)
-	Z_boot = [simulator(point_estimate) for _ ∈ 1:B]
+	Z_boot = [simulate(point_estimate) for _ ∈ 1:B]
 	estimateinbatches(θ̂, Z_boot)
 end
 
