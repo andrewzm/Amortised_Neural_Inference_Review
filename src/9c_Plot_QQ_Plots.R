@@ -22,14 +22,14 @@ library(tidyr)
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
 preds <- list()
 
+
+## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
                 "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000,]
     
 }
-
-
 
 quantile_grid <- seq(0, 1, by = 0.05)
 quantiles <- lapply(preds,
@@ -40,6 +40,16 @@ quantiles <- lapply(preds,
 quantiles_df <- data.frame(quantiles) %>%
                 mutate(quantiles = quantile_grid) %>%
                 gather(Method, Est, -quantiles)                   
+
+## Neural Bayes estimator
+NBE <- read.csv("output/NBE_test.csv") 
+head(quantiles_df)
+head(NBE)
+NBE_probs <- c(0.05, 0.95)
+NBE_empirical_probs <- c(mean(NBE$lscale_true < NBE$lower), 
+                         mean(NBE$lscale_true < NBE$upper))
+NBE <- data.frame(quantiles = NBE_quantiles, Method = "NBE", Est = NBE_empirical_probs)
+
 
 ## Now make quantile plots of all methods, with the identity line in red           
 g <- ggplot(quantiles_df) + 
@@ -52,5 +62,9 @@ g <- ggplot(quantiles_df) +
     theme(text = element_text(size = 10),
           legend.title = element_blank()) +
     coord_fixed(xlim = c(0,1), ylim = c(0,1))
+
+## NBE
+g <- g + 
+  geom_point(data = NBE, aes(x = quantiles, y = Est, colour = Method), size = 2)
               
 ggsave("fig/quantile_plots.png", g, width = 6, height = 5)
