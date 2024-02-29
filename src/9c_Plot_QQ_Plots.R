@@ -21,7 +21,13 @@ library(tidyr)
 ## Plots for naive and MI-based summary statistics
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
 preds <- list()
-
+method_names <- list(Metropolis_Hastings= "MCMC", 
+                     BayesFlow = "NF-NMP", 
+                     VB = "TG-VB", 
+                     VB_Synthetic_Naive = "TG-VB-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     NRE = "NRE",
+                     NBE = "NBE")
 
 ## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
@@ -50,21 +56,37 @@ NBE_empirical_probs <- c(mean(NBE$lscale_true < NBE$lower),
                          mean(NBE$lscale_true < NBE$upper))
 NBE <- data.frame(quantiles = NBE_probs, Method = "NBE", Est = NBE_empirical_probs)
 
+quantiles_df$Method <- c(method_names[quantiles_df$Method])
+quantiles_df$Method <- factor(quantiles_df$Method,
+                                 levels = sort(unlist(method_names)))
 
 ## Now make quantile plots of all methods, with the identity line in red           
-g <- ggplot(quantiles_df) + 
+p <- ggplot(quantiles_df) + 
     geom_line(aes(quantiles, Est,  colour = Method)) +
     geom_abline(intercept = 0, slope = 1, col = "black") +
-    xlab("Quantile") + ylab("Proportion of true length scale") +
+    xlab("Quantile") + ylab("Empirical Quantile") +
     scale_x_continuous(expand = c(0.01, 0.01)) + 
     scale_y_continuous(expand = c(0.01, 0.01)) +
     theme_bw() +
     theme(text = element_text(size = 10),
           legend.title = element_blank()) +
-    coord_fixed(xlim = c(0,1), ylim = c(0,1))
+    coord_fixed(xlim = c(0,1), ylim = c(0,1)) +
+    labs(tag = "(c)") +
+    theme(plot.tag = element_text(face = "bold", size = 10),
+          plot.tag.position = c(0.02, 1.1))
 
 ## NBE
-g <- g + 
+p <- p + 
   geom_point(data = NBE, aes(x = quantiles, y = Est, colour = Method), size = 2)
-              
-ggsave("fig/quantile_plots.png", g, width = 6, height = 5)
+
+             
+# Extract the legend
+g <- ggplotGrob(p)
+legend <- gtable_filter(g, "guide-box")
+# Save or display the legend separately
+png("fig/quantile_plot_legend.png", width = 400, height = 1000, res = 300) # Adjust size as needed
+grid.draw(legend)
+dev.off()
+
+ggsave("fig/quantile_plots.png", p + theme(legend.position = "None"), 
+           width = 3, height = 3.5)

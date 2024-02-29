@@ -24,6 +24,14 @@ library(xtable)
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
 test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 
+method_names <- list(Metropolis_Hastings= "MCMC", 
+                     BayesFlow = "NF-NMP", 
+                     VB = "TG-VB", 
+                     VB_Synthetic_Naive = "TG-VB-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     NRE = "NRE",
+                     NBE = "NBE")
+
 rmspe <- function(truth, est) {
   sqrt(mean((est - truth)^2))
 }
@@ -88,25 +96,38 @@ NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate, Lower = lower,
 NBE <- NBE[1:1000, ] 
 all_results <- bind_rows(all_results, NBE)
 
-latex <- group_by(all_results, Method) %>%
-  summarise(rmspe = rmspe(lscale_true, Est),
-             mae = mae(lscale_true, Est),
-             is90 = is90(lscale_true, Lower, Upper),
-             cov90 = cov90(lscale_true, Lower, Upper)) %>%
-   left_join(results_crps, by = "Method") %>%
-xtable(digits=4) %>% print()
+all_results$Method <- c(method_names[all_results$Method])
+all_results$Method <- factor(all_results$Method,
+                                 levels = sort(unlist(method_names)))
 
+results_crps$Method <- c(method_names[results_crps$Method])
+results_crps$Method <- factor(results_crps$Method,
+                                 levels = sort(unlist(method_names)))
+
+my_xtable <- group_by(all_results, Method) %>%
+  summarise(RMSPE = rmspe(lscale_true, Est),
+            MAE = mae(lscale_true, Est),
+            IS90 = is90(lscale_true, Lower, Upper),
+            COV90 = cov90(lscale_true, Lower, Upper)) %>%
+   left_join(results_crps, by = "Method") %>%
+   arrange(RMSPE) %>%
+xtable(digits = 3) 
+
+latex <- my_xtable %>%  print(include.rownames = FALSE, only.contents = TRUE)
+latex_standalone <- my_xtable %>%  print()
 writeLines(
   c(
     "\\documentclass[12pt]{article}",
     "\\begin{document}",
     "\\thispagestyle{empty}",
-    latex,
+    latex_standalone,
     "\\end{document}"
   ),
-  "fig/results_table.tex"
+  "fig/results_table_standalone.tex"
 )
 
-tools::texi2pdf("fig/results_table.tex", clean = TRUE)
-file.rename(from = "results_table.pdf",  
-            to = "fig/results_table.pdf")
+writeLines(latex, "fig/results_table.tex")
+
+tools::texi2pdf("fig/results_table_standalone.tex", clean = TRUE)
+file.rename(from = "results_table_standalone.pdf",  
+            to = "fig/results_table_standalone.pdf")

@@ -16,10 +16,19 @@
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(gtable)
+library(grid)
 
 ## Plots for naive and MI-based summary statistics
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,, ]
 preds <- list()
+method_names <- list(Metropolis_Hastings= "MCMC", 
+                     BayesFlow = "NF-NMP", 
+                     VB = "TG-VB", 
+                     VB_Synthetic_Naive = "TG-VB-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     NRE = "NRE",
+                     NBE = "NBE")
 
 ## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
@@ -30,7 +39,7 @@ for(method in c("Metropolis_Hastings", "BayesFlow", "VB",
 }
 
 point_summaries <- lapply(preds,
-                          function(x) apply(x, 1, median)) %>%
+                          function(x) apply(x, 1, mean)) %>%
                    data.frame() %>%
                    mutate(lscale_true = test_lscales) %>%
                    gather(Method, Est, -lscale_true)
@@ -39,18 +48,34 @@ point_summaries <- lapply(preds,
 NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate) 
 point_summaries <- bind_rows(point_summaries, NBE[1:1000, ])
 
+point_summaries$Method <- c(method_names[point_summaries$Method])
+point_summaries$Method <- factor(point_summaries$Method,
+                                 levels = sort(unlist(method_names)))
+
 ## Now make facet grid of scatter plots for each method
 ## with identity line
-g <- ggplot(point_summaries) + 
+p <- ggplot(point_summaries) + 
     geom_point(aes(lscale_true, Est, col = Method), size = 0.2) +
     geom_abline(intercept = 0, slope = 1, col = "black") +
-    xlab("True length scale") + ylab("Estimated length scale") +
+    xlab(expression(theta)) + ylab(expression(hat(theta))) +
     theme_bw() +
     coord_fixed() +
     scale_x_continuous(expand = c(0.01, 0.01)) + 
     scale_y_continuous(expand = c(0.01, 0.01)) +
-    theme(text = element_text(size = 7),
-          legend.title = element_blank()) +
-    facet_wrap(~Method, nrow = 2)
+    theme(text = element_text(size = 10),
+          legend.title = element_blank(),
+          panel.spacing = unit(0.8, "lines")) +
+    facet_wrap(~Method, nrow = 2)  +
+    labs(tag = "(b)") +
+    theme(plot.tag = element_text(face = "bold", size = 10),
+          plot.tag.position = c(0.02, 0.98))
 
-ggsave("fig/scatter_plots.png", g, width = 7, height = 7)
+# Extract the legend
+g <- ggplotGrob(p)
+legend <- gtable_filter(g, "guide-box")
+# Save or display the legend separately
+png("fig/scatter_plot_legend.png", width = 400, height = 1000, res = 300) # Adjust size as needed
+grid.draw(legend)
+dev.off()
+
+ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 4.2, height = 2.8)

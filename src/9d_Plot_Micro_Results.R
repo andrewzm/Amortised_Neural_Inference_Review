@@ -16,6 +16,8 @@
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(gtable)
+library(grid)
 library("gridExtra")
 ## Plots for naive and MI-based summary statistics
 micro_test_lscales <- round(readRDS("data/micro_test_lscales.rds"), 5)
@@ -28,6 +30,14 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 
 ## Methods that sample from the posterior
 preds <- list()
+method_names <- list(Metropolis_Hastings= "MCMC", 
+                     BayesFlow = "NF-NMP", 
+                     VB = "TG-VB", 
+                     VB_Synthetic_Naive = "TG-VB-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     NRE = "NRE",
+                     NBE = "NBE")
+
 for(method in c( "Metropolis_Hastings", "BayesFlow", 
                 "VB", "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf", "NRE")) {
@@ -51,32 +61,70 @@ for(i in 1:3) {
 
 }
 zdf <- gather(zdf, sim, val, -s1, -s2)
+zdf$simnum <- strsplit(zdf$sim, "Z") %>% sapply(function(x) as.numeric(x[2]))
 
-## point summaries for other methods:
-samples_all %>% group_by(lscale_true, Method) %>% summarise(Est = median(l))
+samples_all$Method <- c(method_names[samples_all$Method])
+samples_all$Method <- factor(samples_all$Method,
+                                 levels = sort(unlist(method_names)))
+                                 
+
 
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
-      facet_grid(~sim) +
+      facet_wrap(~simnum, labeller = label_bquote(bold(Z)[.(simnum)])) +
       theme_bw() +
-         theme(text = element_text(size = 7),
-               legend.title = element_blank(),
-               legend.position = "bottom") +
-               coord_fixed()         
+      theme(axis.text.x = element_blank(), # Remove x-axis labels
+        axis.text.y = element_blank(), # Remove y-axis labels
+        axis.ticks.x = element_blank(), # Remove x-axis ticks
+        axis.ticks.y = element_blank(),  # Remove y-axis ticks 
+        axis.title.x = element_blank(),  # Remove x-axis title
+        axis.title.y = element_blank())  + # Remove y-axis title
+      theme(text = element_text(size = 7),
+            legend.title = element_blank(),
+            legend.position = "bottom",
+            legend.key.height= unit(0.1, 'in'),
+            legend.key.width= unit(0.5, 'in'),
+            legend.margin = margin(t = -8, unit = "pt"),
+            panel.spacing = unit(1.2, "lines")) +
+      coord_fixed() +  
+      labs(tag = "(d)") +
+      theme(plot.tag = element_text(face = "bold", size = 10),
+          plot.tag.position = c(-0.06, 0.98))
 
+LL <- data.frame(lscale_true = rep(3,3))
 density_plots <- ggplot(samples_all) + 
            geom_density(aes(x = l, colour = Method), alpha = 0.5) + 
            geom_vline(data = NBE, aes(xintercept = estimate, colour = Method)) + 
-           facet_wrap(~lscale_true, scales = "free_y") +
+           facet_wrap(~lscale_true, scales = "free_y",
+                      labeller = label_bquote(theta[true] == .(lscale_true))) +
            geom_vline(aes(xintercept = lscale_true), 
                      linetype = "dashed", col = "black") +
-           xlab("Length scale") + 
+           xlab(expression(theta)) + 
            ylab("Density") +
            xlim(c(0, 0.6)) +
            theme_bw() +
            theme(text = element_text(size = 10),
                  legend.title = element_blank(),
                  legend.position = "bottom")
-  
-g_all <- grid.arrange(grobs = list(spatplots, density_plots), ncol = 1, newpage = FALSE)
-ggsave("fig/micro_test_plots.png", g_all, width = 7, height = 7)
+
+
+# Extract the legend
+g <- ggplotGrob(density_plots)
+legend <- gtable_filter(g, "guide-box")
+# Save or display the legend separately
+png("fig/micro_results_legend.png", width = 6, height = 0.5, 
+   units = "in", res = 300) # Adjust size as needed
+grid.draw(legend)
+dev.off()
+
+# Create a blank (white space) grob
+blank_grob <- rectGrob(gp = gpar(col = NA, fill = "white"))
+
+# Arrange the grobs with a small white space to the left of the top grob
+g_all <- grid.arrange(
+  arrangeGrob(blank_grob, spatplots, ncol = 2, widths = c(1.5/20, 18.5/20)), # Adjust the ratio for the space
+  density_plots + theme(legend.position = "None"),
+  nrow = 2, newpage = FALSE
+) 
+
+ggsave("fig/micro_test_plots.png", g_all, width = 4.2, height = 3.5)
