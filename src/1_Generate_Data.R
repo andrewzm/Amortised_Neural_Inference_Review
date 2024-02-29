@@ -9,11 +9,11 @@ tfp <- import("tensorflow_probability")
 set.seed(1)
 
 ## Total number of simulations (200,000)
-n_batch <- 2000L
+n_batch <- 181L
 nsim_per_batch <- 100L
 nsim_tot <- nsim_per_batch * n_batch
-nsim_train<- round(0.8 * nsim_tot)
-nsim_val <- round(0.1 * nsim_tot)
+nsim_train<- round(160L * nsim_per_batch)
+nsim_val <- round(20L * nsim_per_batch)
 nsim_test <- nsim_tot - nsim_train - nsim_val
 
 ## Number of grid points

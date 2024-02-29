@@ -65,7 +65,7 @@ test_images <- readRDS("data/test_images.rds") %>% tf$constant(dtype = "float32"
 test_lscales <- readRDS("data/test_lscales.rds") %>% tf$constant(dtype = "float32")
 
 
-## Set up the summary network
+## Set up the networks
 Snet <-  CNN(nconvs = 2L, 
             ngrid = ngrid, 
             kernel_sizes = c(3L, 3L),
@@ -80,26 +80,6 @@ Tdense_layer2 <- layer_dense(Tdense_layer1, 16L) %>%
 T_output <- layer_dense(Tdense_layer2, 1L)
 Tnet <- keras_model(Tnet_input, T_output)
 
-train_output_shuffled <- tf$random$shuffle(train_lscales, 0L)
-MIest <- model_MINet(S_net = Snet, T_net = Tnet)
-MIest %>% compile(optimizer = 'adam')
-MIest %>% fit(train_images, 
-             tf$concat(list(train_lscales, 
-                        train_output_shuffled), 
-                        1L),
-             epochs = 5L, 
-             shuffle = TRUE,
-             batch_size = 32L)
-
-## Obtain optimised summary statistics
-train_summ_stat <- MIest$S_net(train_images) %>% tf$expand_dims(2L)
-test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
-
-MIest$S_net$trainable <- FALSE
-
-##############################################
-###### Neural Binding Functions ##############
-##############################################
 
 summ_stat_input <- layer_input(shape = c(1L,1L))
 dense_layer1 <- layer_dense(summ_stat_input, 16L) %>%
@@ -111,67 +91,117 @@ log_sd_summ_stat_net <- layer_dense(dense_layer2, 1L)
 summ_stat_net <- keras_model(summ_stat_input, 
                       list(mean_summ_stat_net, log_sd_summ_stat_net))
 
-synth_lik_est <- model_summnet(summ_stat_net)
-synth_lik_est %>% compile(optimizer = 'adam')
-history <- synth_lik_est %>% fit(train_lscales, 
-                            train_summ_stat, 
-                            epochs = 10,
-                            batch_size = 64L)
-synth_lik_est %>%  fit(train_lscales, 
-                        train_summ_stat,
-                        epochs = 10,
-                        batch_size = 2048L)
 
-synth_lik_est$trainable <- FALSE
-synth_lik_est$summ_stat_network$trainable <- FALSE
-
-## Save binding function data for plotting
-grid_l <- tf$constant(matrix(seq(0, 0.6, by = 0.001)))
-pred_mean <- synth_lik_est$summ_stat_network$predict(grid_l)[[1]]
-pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp()) 
-df_for_plot <- data.frame(l = as.numeric(grid_l), 
-                            mu = as.numeric(pred_mean), 
-                            sd = as.numeric(pred_sd))
-
-test_summ_stat <- as.vector(test_summ_stat)
-save(test_summ_stat, df_for_plot, 
-        file = "output/VB_Synthetic_MutualInf_SummStat_data.rda")
-
-##############################################
-####### NVI with Synthetic Likelihood ########
-##############################################
-
-## VB Recognition model
 phi_est <- CNN(nconvs = 2L, 
                ngrid = ngrid, 
                kernel_sizes = c(3L, 3L),
                filter_num = c(64L, 128L),
                method = "VB")
 
-vae_synth <- model_vae(phi_est, 
+
+# Create a ModelCheckpoint callback
+checkpoint_callback <- callback_model_checkpoint(
+                              filepath = "./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_{epoch}.hdf5",
+                              save_weights_only = TRUE,
+                              save_freq = 1, # Save after every epoch
+                              verbose = 0)
+
+
+if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
+   MIest <- model_MINet(S_net = Snet, T_net = Tnet)
+   synth_lik_est <- model_summnet(summ_stat_net)
+   vae_synth <- model_vae(phi_est, 
+                    summ_stat_compute = function(Z)  MIest$S_net(Z) %>% tf$expand_dims(1L),
+                    synthetic = TRUE,
+                    summ_stat_network = synth_lik_est$summ_stat_network) 
+   #MIest %>% compile(optimizer = 'adam')
+   #synth_lik_est %>% compile(optimizer = 'adam')
+   vae_synth %>% compile(optimizer = optimizer_adam())
+   dummy <- vae_synth(train_images[1:2,,,]) # Just to initialise network
+   vae_synth %>% load_model_weights_hdf5("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")
+
+} else {
+    MIest <- model_MINet(S_net = Snet, T_net = Tnet)
+    
+    train_output_shuffled <- tf$random$shuffle(train_lscales, 0L)
+    MIest %>% compile(optimizer = 'adam')
+    MIest %>% fit(train_images, 
+                tf$concat(list(train_lscales, 
+                            train_output_shuffled), 
+                            1L),
+                epochs = 5L, 
+                shuffle = TRUE,
+                batch_size = 32L)
+
+    ## Obtain optimised summary statistics
+    train_summ_stat <- MIest$S_net(train_images) %>% tf$expand_dims(2L)
+    test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
+
+    MIest$S_net$trainable <- FALSE
+
+    ##############################################
+    ###### Neural Binding Functions ##############
+    ##############################################
+
+    synth_lik_est <- model_summnet(summ_stat_net)
+    
+    synth_lik_est %>% compile(optimizer = 'adam')
+    history <- synth_lik_est %>% fit(train_lscales, 
+                                train_summ_stat, 
+                                epochs = 10,
+                                batch_size = 64L)
+    synth_lik_est %>%  fit(train_lscales, 
+                            train_summ_stat,
+                            epochs = 10,
+                            batch_size = 2048L)
+
+    synth_lik_est$trainable <- FALSE
+    synth_lik_est$summ_stat_network$trainable <- FALSE
+
+    ## Save binding function data for plotting
+    grid_l <- tf$constant(matrix(seq(0, 0.6, by = 0.001)))
+    pred_mean <- synth_lik_est$summ_stat_network$predict(grid_l)[[1]]
+    pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp()) 
+    df_for_plot <- data.frame(l = as.numeric(grid_l), 
+                                mu = as.numeric(pred_mean), 
+                                sd = as.numeric(pred_sd))
+
+    test_summ_stat <- as.vector(test_summ_stat)
+    save(test_summ_stat, df_for_plot, 
+            file = "output/VB_Synthetic_MutualInf_SummStat_data.rda")
+
+    ##############################################
+    ####### NVI with Synthetic Likelihood ########
+    ##############################################
+
+    ## Train the VAE
+    vae_synth <- model_vae(phi_est, 
                     summ_stat_compute = function(Z)  MIest$S_net(Z) %>% tf$expand_dims(1L),
                     synthetic = TRUE,
                     summ_stat_network = synth_lik_est$summ_stat_network)
 
+    vae_synth %>% compile(
+                optimizer = optimizer_adam(
+                                learning_rate = 0.0002))
+    
+    history <- vae_synth %>% fit(train_images, 
+                epochs = 10L, 
+                shuffle = TRUE,
+                batch_size = 512,
+                callbacks = list(checkpoint_callback))
 
-## Train the VAE
-vae_synth %>% compile(
-               optimizer = optimizer_adam(
-                              learning_rate = 0.0001))
-  
-history <- vae_synth %>% fit(train_images, 
-              epochs = 5L, 
-              shuffle = TRUE,
-              batch_size = 2048)
+    # vae_synth %>% compile(optimizer = 
+    #                     optimizer_adam(
+    #                         learning_rate = 0.001))
 
-vae_synth %>% compile(optimizer = 
-                    optimizer_adam(
-                        learning_rate = 0.001))
+    # vae_synth %>% fit(train_images, 
+    #             epochs = 5L, 
+    #             shuffle = TRUE,
+    #             batch_size = 2048,
+    #             callbacks = list(checkpoint_callback))
 
-vae_synth %>% fit(train_images, 
-            epochs = 5L, 
-            shuffle = TRUE,
-            batch_size = 2048)
+}
+
 
 ## Testing with full test data
 pred_VB_trans_mean <- vae_synth$encoder$predict(test_images)[[1]]
@@ -194,23 +224,3 @@ VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1],
 ## Save results
 saveRDS(VB_samples, "output/VB_Synthetic_MutualInf_test.rds")
 saveRDS(VB_samples_micro, "output/VB_Synthetic_MutualInf_micro_test.rds")
-
-
-# p <- ggplot(df_for_plot) +  
-#       geom_point(data = data.frame(l = as.numeric(test_lscales),
-#                                     s = as.numeric(test_summ_stat)),
-#                                   aes(l, s), col = "red", size = 0.2) +
-#       xlab("length scale") + ylab("summary statistic") +
-#                           xlim(-0.1, 0.7) +
-#       theme_bw() +
-#       theme(text = element_text(size = 7),
-#               legend.title = element_blank())
-                                  
-#   ggsave("fig/summ_stats_MI.png", p, width = 8, height = 4)
-
-#   p <- p + geom_line(aes(l, mu), col = "black") +
-#         geom_line(aes(l, mu + 1.95*sd), col = "blue", linetype = "dashed") + 
-#         geom_line(aes(l, mu - 1.95*sd), col = "blue", linetype = "dashed") 
-                      
-      
-#   ggsave("fig/synth_lik_MI.png", p, width = 8, height = 4)

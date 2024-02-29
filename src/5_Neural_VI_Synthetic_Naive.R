@@ -91,6 +91,8 @@ summ_stat_input <- layer_input(shape = c(1L,1L))
 cat("Loading data\n")
 train_images <- readRDS("data/train_images.rds")
 train_lscales <- readRDS("data/train_lscales.rds")
+val_images <- readRDS("data/val_images.rds")
+val_lscales <- readRDS("data/val_lscales.rds")
 test_images <- readRDS("data/test_images.rds")
 test_lscales <- readRDS("data/test_lscales.rds")
 
@@ -116,7 +118,7 @@ checkpoint_callback <- callback_model_checkpoint(
                               save_freq = 1, # Save after every epoch
                               verbose = 0)
 
-if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")) {
+if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")) {
    synth_lik_est %>% compile(optimizer = 'adam')
    vae_synth <- model_vae(phi_est, 
                       summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
@@ -124,7 +126,7 @@ if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")) {
                       summ_stat_network = synth_lik_est$summ_stat_network)
     vae_synth %>% compile(optimizer = 'adam')
     dummy <- vae_synth(train_images[1:2,,,]) # Just to initialise network
-    vae_synth %>% load_model_weights_hdf5("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")
+    vae_synth %>% load_model_weights_hdf5("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")
 } else {
 
   synth_lik_est %>% compile(optimizer = 'adam')
@@ -161,23 +163,23 @@ if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_5.hdf5")) {
     cat("Training the VAE\n")
     vae_synth %>% compile(
                   optimizer = optimizer_adam(
-                                  learning_rate = 0.0001))
+                                  learning_rate = 0.0002))
       
     history <- vae_synth %>% fit(train_images, 
-                  epochs = 5L, 
+                  epochs = 10L, 
                   shuffle = TRUE,
-                  batch_size = 2048,
+                  batch_size = 512L,
                   callbacks = list(checkpoint_callback))
 
-    vae_synth %>% compile(optimizer = 
-                        optimizer_adam(
-                            learning_rate = 0.001),)
+    # vae_synth %>% compile(optimizer = 
+    #                     optimizer_adam(
+    #                         learning_rate = 0.001),)
 
-    vae_synth %>% fit(train_images, 
-                epochs = 5L, 
-                shuffle = TRUE,
-                batch_size = 2048,
-                callbacks = list(checkpoint_callback))
+    # vae_synth %>% fit(train_images, 
+    #             epochs = 5L, 
+    #             shuffle = TRUE,
+    #             batch_size = 2048,
+    #             callbacks = list(checkpoint_callback))
 }
 
   

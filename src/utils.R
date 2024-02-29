@@ -56,7 +56,7 @@ CNN <- function(nconvs, ngrid, kernel_sizes, filter_num,
                             filters = filter_num[i],
                             strides = 1,
                             activation = "relu", 
-                            padding = "valid",
+                            padding = "same",
                             data_format = "channels_last") %>%
     ## Define the max pooling layers
     layer_max_pooling_2d(pool_size = c(2, 2), padding = "valid")

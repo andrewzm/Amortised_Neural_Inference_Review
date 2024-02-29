@@ -78,5 +78,5 @@ density_plots <- ggplot(samples_all) +
                  legend.title = element_blank(),
                  legend.position = "bottom")
   
-g_all <- grid.arrange(grobs = list(spatplots, density_plots), ncol = 1)
+g_all <- grid.arrange(grobs = list(spatplots, density_plots), ncol = 1, newpage = FALSE)
 ggsave("fig/micro_test_plots.png", g_all, width = 7, height = 7)

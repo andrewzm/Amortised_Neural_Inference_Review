@@ -123,12 +123,12 @@ test_micro_images <- readRDS("data/micro_test_images.rds")
 
 ## Posterior samples from BayesFlow on test cases
 BayesFlow_synth_samples <- amortizer$sample(list(summary_conditions = test_images), 
-                                   n_samples = 500L) %>% 
+                                   n_samples = 1000L) %>% 
                                    trans_normCDF()
 
 ## Posterior samples from BayesFlow on micro-test cases
 BayesFlow_synth_micro_samples <- amortizer$sample(list(summary_conditions = test_micro_images), 
-                                        n_samples = 500L) %>% 
+                                        n_samples = 1000L) %>% 
                                         trans_normCDF()
 
 cat("Saving results...\n")
