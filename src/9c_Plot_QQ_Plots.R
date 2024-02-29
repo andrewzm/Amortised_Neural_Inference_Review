@@ -48,7 +48,7 @@ head(NBE)
 NBE_probs <- c(0.05, 0.95)
 NBE_empirical_probs <- c(mean(NBE$lscale_true < NBE$lower), 
                          mean(NBE$lscale_true < NBE$upper))
-NBE <- data.frame(quantiles = NBE_quantiles, Method = "NBE", Est = NBE_empirical_probs)
+NBE <- data.frame(quantiles = NBE_probs, Method = "NBE", Est = NBE_empirical_probs)
 
 
 ## Now make quantile plots of all methods, with the identity line in red           
