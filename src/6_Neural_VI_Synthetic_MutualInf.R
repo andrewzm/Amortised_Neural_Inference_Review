@@ -65,7 +65,7 @@ val_images <- readRDS("data/val_images.rds") %>% tf$constant(dtype = "float32")
 val_lscales <- readRDS("data/val_lscales.rds") %>% tf$constant(dtype = "float32")
 test_images <- readRDS("data/test_images.rds") %>% tf$constant(dtype = "float32")
 test_lscales <- readRDS("data/test_lscales.rds") %>% tf$constant(dtype = "float32")
-
+micro_test_images <- readRDS("data/micro_test_images.rds") %>% tf$constant(dtype = "float32")
 
 ## Set up the networks
 Snet <-  CNN(nconvs = 2L, 
@@ -100,16 +100,23 @@ phi_est <- CNN(nconvs = 2L,
                filter_num = c(64L, 128L),
                method = "VB")
 
-
-# Create a ModelCheckpoint callback
-checkpoint_callback <- callback_model_checkpoint(
-                              filepath = "./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_{epoch}.hdf5",
+# Create a ModelCheckpoint callback for MI network
+MI_ckpt_dir <-  "./ckpts/NVI_Synth_MutualInf/"
+checkpoint_callback_MI <- callback_model_checkpoint(
+                              filepath = paste0(MI_ckpt_dir, "/checkpoint_MI_epoch_{epoch}.hdf5"),
                               save_weights_only = TRUE,
-                              save_freq = 1, # Save after every epoch
                               verbose = 0)
+MI_checkpoint = paste0(MI_ckpt_dir, "checkpoint_MI_epoch_5.hdf5")
 
+# Create a ModelCheckpoint callback for VAE
+VAE_ckpt_dir <-  "./ckpts/NVI_Synth_MutualInf/"
+checkpoint_callback_VAE <- callback_model_checkpoint(
+                              filepath = paste0(VAE_ckpt_dir, "/checkpoint_VAE_epoch_{epoch}.hdf5"),
+                              save_weights_only = TRUE,
+                              verbose = 0)
+VAE_checkpoint <- paste0(VAE_ckpt_dir, "checkpoint_VAE_epoch_10.hdf5")
 
-if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
+if(file.exists(VAE_checkpoint) & file.exists(MI_checkpoint)) {
    MIest <- model_MINet(S_net = Snet, T_net = Tnet)
    synth_lik_est <- model_summnet(summ_stat_net)
    vae_synth <- model_vae(phi_est, 
@@ -118,9 +125,12 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
                     summ_stat_network = synth_lik_est$summ_stat_network) 
    #MIest %>% compile(optimizer = 'adam')
    #synth_lik_est %>% compile(optimizer = 'adam')
+   MIest %>% compile(optimizer = 'adam')
    vae_synth %>% compile(optimizer = optimizer_adam())
+   dummy <- MIest(train_images[1:2,,,]) # Just to initialise network
    dummy <- vae_synth(train_images[1:2,,,]) # Just to initialise network
-   vae_synth %>% load_model_weights_hdf5("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")
+   MIest %>% load_model_weights_hdf5(MI_checkpoint)
+   vae_synth %>% load_model_weights_hdf5(VAE_checkpoint)
 
 } else {
     MIest <- model_MINet(S_net = Snet, T_net = Tnet)
@@ -133,17 +143,12 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
                             1L),
                 epochs = 5L, 
                 shuffle = TRUE,
-                batch_size = 32L)
+                batch_size = 32L,
+                callbacks = list(checkpoint_callback_MI))
 
     ## Obtain optimised summary statistics
     train_summ_stat <- MIest$S_net(train_images) %>% tf$expand_dims(2L)
-    val_summ_stat <- MIest$S_net(val_images) %>% tf$expand_dims(2L)
-    test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
-
-    saveRDS(as.vector(train_summ_stat), "output/VB_Synthetic_MutualInf_train_SummStats.rds")
-    saveRDS(as.vector(val_summ_stat), "output/VB_Synthetic_MutualInf_val_SummStats.rds")
-    saveRDS(as.vector(test_summ_stat), "output/VB_Synthetic_MutualInf_test_SummStats.rds")
-
+    
     MIest$S_net$trainable <- FALSE
 
     ##############################################
@@ -173,10 +178,7 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
                                 mu = as.numeric(pred_mean), 
                                 sd = as.numeric(pred_sd))
 
-    test_summ_stat <- as.vector(test_summ_stat)
-    save(test_summ_stat, df_for_plot, 
-            file = "output/VB_Synthetic_MutualInf_SummStat_data.rda")
-
+    
     ##############################################
     ####### NVI with Synthetic Likelihood ########
     ##############################################
@@ -195,18 +197,7 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
                 epochs = 10L, 
                 shuffle = TRUE,
                 batch_size = 512,
-                callbacks = list(checkpoint_callback))
-
-    # vae_synth %>% compile(optimizer = 
-    #                     optimizer_adam(
-    #                         learning_rate = 0.001))
-
-    # vae_synth %>% fit(train_images, 
-    #             epochs = 5L, 
-    #             shuffle = TRUE,
-    #             batch_size = 2048,
-    #             callbacks = list(checkpoint_callback))
-
+                callbacks = list(checkpoint_callback_VAE))
 }
 
 
@@ -231,3 +222,14 @@ VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1],
 saveRDS(VB_samples, "output/VB_Synthetic_MutualInf_test.rds")
 saveRDS(VB_samples, "output/VB_Synthetic_MutualInf_test.rds")
 saveRDS(VB_samples_micro, "output/VB_Synthetic_MutualInf_micro_test.rds")
+
+## Save summary statistics
+train_summ_stat <- MIest$S_net(train_images) %>% tf$expand_dims(2L)    
+val_summ_stat <- MIest$S_net(val_images) %>% tf$expand_dims(2L)
+test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
+micro_test_summ_stat <- MIest$S_net(micro_test_images) %>% tf$expand_dims(2L)
+
+saveRDS(as.vector(train_summ_stat), "output/VB_Synthetic_MutualInf_train_SummStats.rds")
+saveRDS(as.vector(val_summ_stat), "output/VB_Synthetic_MutualInf_val_SummStats.rds")
+saveRDS(as.vector(test_summ_stat), "output/VB_Synthetic_MutualInf_test_SummStats.rds")
+saveRDS(as.vector(micro_test_summ_stat), "output/VB_Synthetic_MutualInf_micro_test_SummStats.rds")

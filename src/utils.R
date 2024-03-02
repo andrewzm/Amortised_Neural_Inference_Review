@@ -221,6 +221,10 @@ model_MINet <- new_model_class(
     )
   }),
 
+  call = function(inputs, training = FALSE) {
+    return(self$S_net(inputs))
+  },
+
   train_step = function(data) {
     with(tf$GradientTape() %as% tape, {
           Z <- data[[1]]
