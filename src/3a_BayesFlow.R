@@ -132,5 +132,6 @@ BayesFlow_synth_micro_samples <- amortizer$sample(list(summary_conditions = test
                                         trans_normCDF()
 
 cat("Saving results...\n")
+stop()
 saveRDS(BayesFlow_synth_samples %>% drop(), "output/BayesFlow_test.rds")
 saveRDS(BayesFlow_synth_micro_samples %>% drop(), "output/BayesFlow_micro_test.rds")

@@ -26,9 +26,9 @@ test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 
 method_names <- list(Metropolis_Hastings= "MCMC", 
                      BayesFlow = "NF-NMP", 
-                     VB = "TG-VB", 
-                     VB_Synthetic_Naive = "TG-VB-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     VB = "TG-NVI", 
+                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -106,7 +106,7 @@ results_crps$Method <- factor(results_crps$Method,
 
 my_xtable <- group_by(all_results, Method) %>%
   summarise(RMSPE = rmspe(lscale_true, Est),
-            MAE = mae(lscale_true, Est),
+            MAPE = mae(lscale_true, Est),
             IS90 = is90(lscale_true, Lower, Upper),
             COV90 = cov90(lscale_true, Lower, Upper)) %>%
    left_join(results_crps, by = "Method") %>%

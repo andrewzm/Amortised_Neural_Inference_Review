@@ -32,9 +32,9 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC", 
                      BayesFlow = "NF-NMP", 
-                     VB = "TG-VB", 
-                     VB_Synthetic_Naive = "TG-VB-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     VB = "TG-NVI", 
+                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -79,21 +79,21 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
         axis.ticks.y = element_blank(),  # Remove y-axis ticks 
         axis.title.x = element_blank(),  # Remove x-axis title
         axis.title.y = element_blank())  + # Remove y-axis title
-      theme(text = element_text(size = 7),
+      theme(text = element_text(size = 10),
             legend.title = element_blank(),
-            legend.position = "bottom",
-            legend.key.height= unit(0.1, 'in'),
-            legend.key.width= unit(0.5, 'in'),
-            legend.margin = margin(t = -8, unit = "pt"),
+            legend.position = "left",
+            legend.key.height= unit(0.2, 'in'),
+            legend.key.width= unit(0.1, 'in'),
+            legend.margin = margin(t = -18, r  = -10, unit = "pt"),
             panel.spacing = unit(1.2, "lines")) +
       coord_fixed() +  
       labs(tag = "(d)") +
       theme(plot.tag = element_text(face = "bold", size = 10),
-          plot.tag.position = c(-0.06, 0.98))
+          plot.tag.position = c(0.02, 1.1))
 
 LL <- data.frame(lscale_true = rep(3,3))
 density_plots <- ggplot(samples_all) + 
-           geom_density(aes(x = l, colour = Method), alpha = 0.5) + 
+           geom_density(aes(x = l, colour = Method), alpha = 1, linewidth = 0.2) + 
            geom_vline(data = NBE, aes(xintercept = estimate, colour = Method)) + 
            facet_wrap(~lscale_true, scales = "free_y",
                       labeller = label_bquote(theta[true] == .(lscale_true))) +
@@ -122,9 +122,9 @@ blank_grob <- rectGrob(gp = gpar(col = NA, fill = "white"))
 
 # Arrange the grobs with a small white space to the left of the top grob
 g_all <- grid.arrange(
-  arrangeGrob(blank_grob, spatplots, ncol = 2, widths = c(1.5/20, 18.5/20)), # Adjust the ratio for the space
-  density_plots + theme(legend.position = "None"),
+  #arrangeGrob(blank_grob, spatplots, ncol = 2, widths = c(1.5/20, 18.5/20)), # Adjust the ratio for the space
+  spatplots, density_plots + theme(legend.position = "None"),
   nrow = 2, newpage = FALSE
 ) 
 
-ggsave("fig/micro_test_plots.png", g_all, width = 4.2, height = 3.5)
+ggsave("fig/micro_test_plots.png", g_all, width = 3.6, height = 3.3)

@@ -61,6 +61,8 @@ D_mask_tf <- ((D_tf < (mean(diff(s1))*1.1)) %>%
 ## Load the data
 train_images <- readRDS("data/train_images.rds") %>% tf$constant(dtype = "float32")
 train_lscales <- readRDS("data/train_lscales.rds") %>% tf$constant(dtype = "float32")
+val_images <- readRDS("data/val_images.rds") %>% tf$constant(dtype = "float32")
+val_lscales <- readRDS("data/val_lscales.rds") %>% tf$constant(dtype = "float32")
 test_images <- readRDS("data/test_images.rds") %>% tf$constant(dtype = "float32")
 test_lscales <- readRDS("data/test_lscales.rds") %>% tf$constant(dtype = "float32")
 
@@ -135,7 +137,12 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
 
     ## Obtain optimised summary statistics
     train_summ_stat <- MIest$S_net(train_images) %>% tf$expand_dims(2L)
+    val_summ_stat <- MIest$S_net(val_images) %>% tf$expand_dims(2L)
     test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
+
+    saveRDS(train_summ_stat, "output/VB_Synthetic_MutualInf_train_SummStats.rds")
+    saveRDS(val_summ_stat, "output/VB_Synthetic_MutualInf_val_SummStats.rds")
+    saveRDS(test_summ_stat, "output/VB_Synthetic_MutualInf_test_SummStats.rds")
 
     MIest$S_net$trainable <- FALSE
 
@@ -221,6 +228,6 @@ VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1],
                 pred_VB_trans_sd) %>%
             matrix(ncol = 500L) %>% trans_sigmoid()
 
-## Save results
+saveRDS(VB_samples, "output/VB_Synthetic_MutualInf_test.rds")
 saveRDS(VB_samples, "output/VB_Synthetic_MutualInf_test.rds")
 saveRDS(VB_samples_micro, "output/VB_Synthetic_MutualInf_micro_test.rds")

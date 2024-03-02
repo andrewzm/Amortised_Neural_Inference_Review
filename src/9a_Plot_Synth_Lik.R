@@ -24,20 +24,34 @@ library(gtable)
 test_lscales <- readRDS("data/test_lscales.rds")
 
 summ_data <- summ_test <- NULL
+method_names <- list(Naive = "TG-NVI-Synth1", 
+                     MutualInf = "TG-NVI-Synth2")
 for(method in c("Naive", "MutualInf")) {
 
     load(paste0("output/VB_Synthetic_", method, "_SummStat_data.rda"))
     df_for_plot$method <- method
     summ_data <- rbind(summ_data, df_for_plot)
-    summ_test <- rbind(summ_test, data.frame(l = test_lscales, s = test_summ_stat, method = method))
+    summ_test <- rbind(summ_test, 
+                        data.frame(l = test_lscales, 
+                                   s = test_summ_stat, 
+                                   method = method))
     
 }
+
+summ_data$method <- c(method_names[summ_data$method])
+summ_data$method <- factor(summ_data$method, 
+                           levels = method_names)
+
+summ_test$method <- c(method_names[summ_test$method])
+summ_test$method <- factor(summ_test$method, 
+                           levels = method_names)
 
 p <- ggplot(summ_data) +  
     geom_point(data = summ_test, aes(l, s), col = "red", size = 0.2) +
     facet_wrap(~method, scales = "free", ncol = 2) +
-    xlab(expression(theta)) + ylab(expression(S(bold(Z)))) +
-                        xlim(-0.1, 0.7) +
+    xlab(expression(theta)) + 
+    ylab(expression(S(bold(Z)))) +
+    xlim(-0.1, 0.7) +
     theme_bw() +
     theme(text = element_text(size = 10),
             legend.title = element_blank()) + 
@@ -50,5 +64,5 @@ p <- ggplot(summ_data) +
     theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 0.98))
 
-ggsave(paste0("fig/synth_liks.png"), p, width = 3, height = 2.7)
+ggsave(paste0("fig/synth_liks.png"), p, width = 3.6, height = 2.4)
 

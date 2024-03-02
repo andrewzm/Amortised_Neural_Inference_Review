@@ -24,9 +24,9 @@ test_lscales <- readRDS("data/test_lscales.rds")[1:1000,, ]
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC", 
                      BayesFlow = "NF-NMP", 
-                     VB = "TG-VB", 
-                     VB_Synthetic_Naive = "TG-VB-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     VB = "TG-NVI", 
+                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -65,6 +65,7 @@ p <- ggplot(point_summaries) +
     theme(text = element_text(size = 10),
           legend.title = element_blank(),
           panel.spacing = unit(0.8, "lines")) +
+      theme(strip.text = element_text(size = 6)) +
     facet_wrap(~Method, nrow = 2)  +
     labs(tag = "(b)") +
     theme(plot.tag = element_text(face = "bold", size = 10),
@@ -78,4 +79,4 @@ png("fig/scatter_plot_legend.png", width = 400, height = 1000, res = 300) # Adju
 grid.draw(legend)
 dev.off()
 
-ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 4.2, height = 2.8)
+ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 3.6, height = 2.4)

@@ -17,15 +17,17 @@
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(gtable)
+library(grid)
 
 ## Plots for naive and MI-based summary statistics
 test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC", 
                      BayesFlow = "NF-NMP", 
-                     VB = "TG-VB", 
-                     VB_Synthetic_Naive = "TG-VB-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-VB-Synth2", 
+                     VB = "TG-NVI", 
+                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
+                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -62,8 +64,8 @@ quantiles_df$Method <- factor(quantiles_df$Method,
 
 ## Now make quantile plots of all methods, with the identity line in red           
 p <- ggplot(quantiles_df) + 
-    geom_line(aes(quantiles, Est,  colour = Method)) +
     geom_abline(intercept = 0, slope = 1, col = "black") +
+    geom_line(aes(quantiles, Est,  colour = Method), linewidth = 0.2) +
     xlab("Quantile") + ylab("Empirical Quantile") +
     scale_x_continuous(expand = c(0.01, 0.01)) + 
     scale_y_continuous(expand = c(0.01, 0.01)) +
@@ -73,11 +75,13 @@ p <- ggplot(quantiles_df) +
     coord_fixed(xlim = c(0,1), ylim = c(0,1)) +
     labs(tag = "(c)") +
     theme(plot.tag = element_text(face = "bold", size = 10),
-          plot.tag.position = c(0.02, 1.1))
+          plot.tag.position = c(0.01, 0.98))
 
 ## NBE
 p <- p + 
+  geom_point(data = NBE, aes(x = quantiles, y = Est), colour = "black", size = 2.5) +
   geom_point(data = NBE, aes(x = quantiles, y = Est, colour = Method), size = 2)
+  
 
              
 # Extract the legend
@@ -89,4 +93,5 @@ grid.draw(legend)
 dev.off()
 
 ggsave("fig/quantile_plots.png", p + theme(legend.position = "None"), 
-           width = 3, height = 3.5)
+           width = 3.6, height = 3.3)
+
