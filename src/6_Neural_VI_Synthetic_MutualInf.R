@@ -140,9 +140,9 @@ if(file.exists("./ckpts/NVI_Synth_MutualInf/checkpoint_epoch_10.hdf5")) {
     val_summ_stat <- MIest$S_net(val_images) %>% tf$expand_dims(2L)
     test_summ_stat <- MIest$S_net(test_images) %>% tf$expand_dims(2L)
 
-    saveRDS(train_summ_stat, "output/VB_Synthetic_MutualInf_train_SummStats.rds")
-    saveRDS(val_summ_stat, "output/VB_Synthetic_MutualInf_val_SummStats.rds")
-    saveRDS(test_summ_stat, "output/VB_Synthetic_MutualInf_test_SummStats.rds")
+    saveRDS(as.vector(train_summ_stat), "output/VB_Synthetic_MutualInf_train_SummStats.rds")
+    saveRDS(as.vector(val_summ_stat), "output/VB_Synthetic_MutualInf_val_SummStats.rds")
+    saveRDS(as.vector(test_summ_stat), "output/VB_Synthetic_MutualInf_test_SummStats.rds")
 
     MIest$S_net$trainable <- FALSE
 
