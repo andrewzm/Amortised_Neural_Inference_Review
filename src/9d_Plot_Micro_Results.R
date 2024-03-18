@@ -67,8 +67,6 @@ samples_all$Method <- c(method_names[samples_all$Method])
 samples_all$Method <- factor(samples_all$Method,
                                  levels = sort(unlist(method_names)))
                                  
-
-
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
       facet_wrap(~simnum, labeller = label_bquote(bold(Z)[.(simnum)])) +

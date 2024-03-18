@@ -1,12 +1,12 @@
+using NeuralEstimators
 using BSON: @save, @load
 using CSV
 using DataFrames
 using Distances
+using Distributions
 using Flux
 using LinearAlgebra
-using NeuralEstimators
 using RData
-using RecursiveArrayTools
 using Tables
 
 # ---- Load the data ----
@@ -47,64 +47,52 @@ val_lscales   = loadparameters("val_lscales")
 test_lscales  = loadparameters("test_lscales")
 micro_test_lscales = loadparameters("micro_test_lscales")
 
-
 # ---- Construct the point and quantile estimators ----
 
 p = 1 # number of parameters in the statistical model
 
+dgrid = 16 # dimension of one side of grid
 
-# Summary network
-# ψ = Chain(
-# 	Conv((3, 3), 1 => 32, relu),
-# 	MaxPool((2, 2)),
-# 	Conv((3, 3),  32 => 64, relu),
-# 	MaxPool((2, 2)),
-# 	Flux.flatten
-# 	)
-#
-# # Inference network
-# ϕ = Chain(Dense(256, 64, leakyrelu), Dense(64, p))
+#channels = [64, 128]
+channels = [32, 64]
 
 # Summary network
 ψ = Chain(
-	Conv((5, 5), 1 => 6, relu),
-	Conv((5, 5),  6 => 12, relu),
+	Conv((3, 3), 1 => channels[1], relu, pad = SamePad()),
+	MaxPool((2, 2)),
+	Conv((3, 3),  channels[1] => channels[2], relu, pad = SamePad()),
+	MaxPool((2, 2)),
 	Flux.flatten
 	)
 
 # Inference network
-ϕ = Chain(Dense(768, 50, relu), Dense(50, 50, relu), Dense(50, p))
+ϕ = Chain(
+  Dropout(0.1),
+  Dense(dgrid * channels[end], 64, relu),
+  Dropout(0.1),
+  Dense(64, p)
+  )
 
-# DeepSet
 architecture = DeepSet(ψ, ϕ)
 
-# Initialise point estimator and posterior credible-interval estimator
-g = Compress(0.0, 0.6) # optional function to ensure estimates fall within the prior support
-θ̂ = PointEstimator(architecture, g)
-θ̂₂ = IntervalEstimator(architecture; probs = [0.05, 0.95])
-# TODO quantile estimator for 30 probability levels
-
-
-# Example data: one independent replicate
-Z = rand(Float32, 16, 16, 1, 1)
-θ̂(Z)
-
-# Example data: five independent replicates
-Z = rand(Float32, 16, 16, 1, 5)
-θ̂(Z)
-
-# Example data: two data sets, with five and ten independent replicates respectively
-Z = [rand(Float32, 16, 16, 1, n) for n in [5, 10]]
-θ̂(Z)
-
+θ̂  = PointEstimator(architecture)
+θ̂₂ = QuantileEstimator(architecture)
 
 # ---- Train the estimators ----
 
-@info "Training the neural point estimator"
-θ̂ = train(θ̂, train_lscales, val_lscales, train_images, val_images)
+@info "Training neural Bayes estimator: posterior mean"
+θ̂ = train(θ̂, train_lscales, val_lscales, train_images, val_images, loss = Flux.mse)
 
-@info "Training the neural quantile estimator"
-θ̂₂ = train(θ̂₂, train_lscales, val_lscales, train_images, val_images)
+@info "Training neural Bayes estimator: marginal posterior quantiles"
+#θ̂₂ = train(θ̂₂, train_lscales, val_lscales, train_images, val_images)
+N = 1000 # just for prototyping
+θ̂₂ = train(θ̂₂, train_lscales[:, 1:N], val_lscales[:, 1:N], train_images[1:N], val_images[1:N])
+
+# Assess the point estimator
+assessment = assess(θ̂, val_lscales[:, 1:1000], val_images[1:1000])
+bias(assessment)
+rmse(assessment)
+plot(assessment)
 
 # Save the trained estimators
 mkpath("ckpts/NBE")
@@ -117,30 +105,21 @@ quantile_estimator = Flux.state(θ̂₂)
 Flux.loadmodel!(θ̂, point_estimator)
 Flux.loadmodel!(θ̂₂, quantile_estimator)
 
-
-# ---- Assess the estimators ----
-
-assessment = assess(θ̂, val_lscales, val_images)
-bias(assessment)
-rmse(assessment)
-plot(assessment)
-
-assessment = assess(θ̂₂, val_lscales, val_images)
-coverage(assessment)
-# plot(assessment)
-
-
 # ---- Apply the estimators to the test data ----
 
+priorsupport(θ̂) = min(max(θ̂, 0), 0.6)
+priorsupport(θ̂::AbstractMatrix) = priorsupport.(θ̂)
+
 function estimate(Z, θ̂, θ̂₂)
+
 	# We can apply the estimators simply as θ̂(images), but here we use the
 	# function estimateinbatches() to prevent memory issues when images is large
-	point_estimates = estimateinbatches(θ̂, Z)
-	quantile_estimates = estimateinbatches(θ̂₂, Z)
+	point_estimates = estimateinbatches(Chain(θ̂, priorsupport), Z)
+	quantile_estimates = estimateinbatches(Chain(θ̂₂, priorsupport), Z)
 
 	# Store as N x 3 dataframe (point estimate, lower bound, upper bound)
 	estimates = vcat(point_estimates, quantile_estimates)'
-	estimates = DataFrame(estimates, ["estimate", "lower", "upper"])
+	estimates = DataFrame(estimates, ["estimate", "lower", "25thpercentile", "median", "75thpercentile", "upper"])
 	estimates[:, :Method] .= "NBE" # save the method for plotting
 
 	return estimates
@@ -153,43 +132,3 @@ CSV.write("output/NBE_micro_test.csv", estimates_micro_test)
 estimates_test = estimate(test_images, θ̂, θ̂₂)
 estimates_test[:, :lscale_true] = vec(test_lscales) # add true values
 CSV.write("output/NBE_test.csv", estimates_test)
-
-
-## Bootstrap
-function simulate(θ, m = 1)
-
-	# Spatial locations
-	pts = range(0, 1, length = 16)
-	S = expandgrid(pts, pts)
-	n = size(S, 1)
-
-	# Distance matrix, covariance matrix, and Cholesky factor
-	D = pairwise(Euclidean(), S, dims = 1)
-	Σ = exp.(-D ./ θ)
-	L = cholesky(Symmetric(Σ)).L
-
-	# Spatial field
-	Z = L * randn(n)
-
-	# Reshape to 16x16 image and convert to Float32 for efficiency
-	Z = reshape(Z, 16, 16, 1, 1)
-	Z = Float32.(Z)
-
-	return Z
-end
-
-function parametricbootstrap(θ̂, Z; B = 1000)
-	point_estimate = θ̂(Z)
-	Z_boot = [simulate(point_estimate) for _ ∈ 1:B]
-	estimateinbatches(θ̂, Z_boot)
-end
-
-Z = micro_test_images
-bs_estimates = parametricbootstrap.(Ref(θ̂), Z)
-bs_estimates = vcat(bs_estimates...)
-CSV.write("output/NBE_bootstrap_micro_test.csv", Tables.table(bs_estimates), writeheader=false)
-
-Z = test_images
-bs_estimates = parametricbootstrap.(Ref(θ̂), Z; B = 5)
-bs_estimates = vcat(bs_estimates...)
-CSV.write("output/NBE_bootstrap_test.csv", Tables.table(bs_estimates), writeheader=false)
