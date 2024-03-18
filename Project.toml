@@ -1,0 +1,7 @@
+name = "ARSIA"
+uuid = "aa38df27-5486-4fa9-baca-b7c4c2243a83"
+authors = ["Matthew Sainsbury-Dale <msdale@uow.edu.au>"]
+version = "0.1.0"
+
+[deps]
+NeuralEstimators = "38f6df31-6b4a-4144-b2af-7ace2da57606"
