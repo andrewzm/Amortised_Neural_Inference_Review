@@ -32,14 +32,15 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC", 
                      BayesFlow = "NF-NMP", 
-                     VB = "TG-NVI", 
+                     VB = "TG-NVI",
+                     VB_MDN = "TMDN-NVI", 
                      VB_Synthetic_Naive = "TG-NVI-Synth1", 
                      VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
                      NRE = "NRE",
                      NBE = "NBE")
 
 for(method in c( "Metropolis_Hastings", "BayesFlow", 
-                "VB", "VB_Synthetic_Naive", 
+                "VB", "VB_MDN", "VB_Synthetic_Naive", 
                 "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_micro_test.rds"))
     
@@ -60,6 +61,7 @@ for(i in 1:3) {
    
 
 }
+
 zdf <- gather(zdf, sim, val, -s1, -s2)
 zdf$simnum <- strsplit(zdf$sim, "Z") %>% sapply(function(x) as.numeric(x[2]))
 
@@ -67,8 +69,6 @@ samples_all$Method <- c(method_names[samples_all$Method])
 samples_all$Method <- factor(samples_all$Method,
                                  levels = sort(unlist(method_names)))
                                  
-
-
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
       facet_wrap(~simnum, labeller = label_bquote(bold(Z)[.(simnum)])) +
@@ -106,7 +106,6 @@ density_plots <- ggplot(samples_all) +
            theme(text = element_text(size = 10),
                  legend.title = element_blank(),
                  legend.position = "bottom")
-
 
 # Extract the legend
 g <- ggplotGrob(density_plots)

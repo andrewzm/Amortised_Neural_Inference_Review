@@ -30,8 +30,14 @@ np <- import("numpy")
 bf <- import("bayesflow")
 tfp <- import("tensorflow_probability")
 
+
 ## Load Auxiliary R functions
 source("src/utils.R")
+
+## Set up configuration
+case <- "MSP"
+settings <- config_setup(case = case, method_name = "BayesFlow")
+
 
 ## Fix seed
 set.seed(1)
@@ -73,32 +79,34 @@ summary_net <- CNN(nconvs = 2L,
                   ngrid = ngrid, 
                   kernel_sizes = c(3L, 3L),
                   filter_num = c(64L, 128L),
-                  output_dims = 1L)
+                  output_dims = settings$num_params)
 
 ## For the inference network use an INN
 inference_net <- bf$networks$InvertibleNetwork(
-    num_params = 1L,
+    num_params = settings$num_params,
     num_coupling_layers = 4L,
     coupling_settings = list(dense_args = list(kernel_regularizer = NULL), 
                              dropout = FALSE)
 )
 
 ## Load data
-train_images <- readRDS("data/train_images.rds") %>% drop()
-train_lscales <- readRDS("data/train_lscales.rds") %>% drop() %>% as.matrix()
-val_images <- readRDS("data/val_images.rds") %>% drop()
-val_lscales <- readRDS("data/val_lscales.rds") %>% drop() %>% as.matrix()
+train_images <- readRDS(settings$fname_train_data) %>% drop()
+train_params <- readRDS(settings$fname_train_params) %>% drop() %>% as.matrix()
+val_images <- readRDS(settings$fname_val_data) %>% drop()
+val_params <- readRDS(settings$fname_val_params) %>% drop() %>% as.matrix()
 
 ## Set up the amortizer in BayesFlow
 simulation_dict <- list(sim_data = train_images,
-                        prior_draws = trans_normCDF_inv(train_lscales))
+                        prior_draws = trans_normCDF_inv(train_params, 
+                                                        support = settings$support))
 validation_dict <- list(sim_data = val_images,
-                         prior_draws = trans_normCDF_inv(val_lscales))
+                         prior_draws = trans_normCDF_inv(val_params,
+                                                         support = settings$support))
 
 amortizer = bf$amortizers$AmortizedPosterior(inference_net, 
                                              summary_net)
 trainer = bf$trainers$Trainer(amortizer = amortizer, 
-                              checkpoint_path = "ckpts/BayesFlow/")
+                              checkpoint_path = settings$ckpt_path)
 
 if(!is.null(trainer$manager$latest_checkpoint)) {
   cat("Loading pre-trained network...\n")
@@ -118,20 +126,21 @@ if(!is.null(trainer$manager$latest_checkpoint)) {
 cat("Applying to test data...\n")
 
 ## Run the amortizer on test data
-test_images <- readRDS("data/test_images.rds")
-test_micro_images <- readRDS("data/micro_test_images.rds")
+test_images <- readRDS(settings$fname_test_data)
+test_micro_images <- readRDS(settings$fname_micro_test_data)
 
 ## Posterior samples from BayesFlow on test cases
 BayesFlow_synth_samples <- amortizer$sample(list(summary_conditions = test_images), 
                                    n_samples = 1000L) %>% 
-                                   trans_normCDF()
+                                   drop() %>%
+                                   trans_normCDF(support = settings$support)
 
 ## Posterior samples from BayesFlow on micro-test cases
 BayesFlow_synth_micro_samples <- amortizer$sample(list(summary_conditions = test_micro_images), 
                                         n_samples = 1000L) %>% 
-                                        trans_normCDF()
+                                        drop() %>%
+                                        trans_normCDF(support = settings$support)
 
 cat("Saving results...\n")
-stop()
-saveRDS(BayesFlow_synth_samples %>% drop(), "output/BayesFlow_test.rds")
-saveRDS(BayesFlow_synth_micro_samples %>% drop(), "output/BayesFlow_micro_test.rds")
+saveRDS(BayesFlow_synth_samples, settings$output_path)
+saveRDS(BayesFlow_synth_micro_samples, settings$output_micro_path)
