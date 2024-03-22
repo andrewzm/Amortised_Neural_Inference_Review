@@ -2,12 +2,14 @@ using NeuralEstimators
 using BSON: @save, @load
 using CSV
 using DataFrames
-using Distances
-using Distributions
 using Flux
-using LinearAlgebra
 using RData
 using Tables
+
+# By default, NeuralEstimators will automatically find and utilise a working
+# GPU, if one is available. To use the CPU (even if a GPU is available), set
+# the following flag to false.
+use_gpu = true
 
 # ---- Load the data ----
 
@@ -49,11 +51,8 @@ micro_test_lscales = loadparameters("micro_test_lscales")
 
 # ---- Construct the point and quantile estimators ----
 
-p = 1 # number of parameters in the statistical model
-
+p = 1      # number of parameters in the statistical model
 dgrid = 16 # dimension of one side of grid
-
-#channels = [64, 128]
 channels = [32, 64]
 
 # Summary network
@@ -80,16 +79,19 @@ architecture = DeepSet(ψ, ϕ)
 
 # ---- Train the estimators ----
 
-@info "Training neural Bayes estimator: posterior mean"
-θ̂ = train(θ̂, train_lscales, val_lscales, train_images, val_images, loss = Flux.mse)
+# Pre-train with small samples
+N = 1000
+@info "Pre-training neural Bayes estimators with small training sets..."
+θ̂ = train(θ̂, train_lscales[:, 1:N], val_lscales[:, 1:N], train_images[1:N], val_images[1:N], use_gpu=use_gpu)
+θ̂₂ = train(θ̂₂, train_lscales[:, 1:N], val_lscales[:, 1:N], train_images[1:N], val_images[1:N], use_gpu=use_gpu)
 
+@info "Training neural Bayes estimator: posterior mean"
+θ̂ = train(θ̂, train_lscales, val_lscales, train_images, val_images, loss = Flux.mse, use_gpu=use_gpu)
 @info "Training neural Bayes estimator: marginal posterior quantiles"
-#θ̂₂ = train(θ̂₂, train_lscales, val_lscales, train_images, val_images)
-N = 1000 # just for prototyping
-θ̂₂ = train(θ̂₂, train_lscales[:, 1:N], val_lscales[:, 1:N], train_images[1:N], val_images[1:N])
+θ̂₂ = train(θ̂₂, train_lscales, val_lscales, train_images, val_images)
 
 # Assess the point estimator
-assessment = assess(θ̂, val_lscales[:, 1:1000], val_images[1:1000])
+assessment = assess(θ̂, val_lscales[:, 1:1000], val_images[1:1000], use_gpu=use_gpu)
 bias(assessment)
 rmse(assessment)
 plot(assessment)
@@ -114,10 +116,10 @@ function estimate(Z, θ̂, θ̂₂)
 
 	# We can apply the estimators simply as θ̂(images), but here we use the
 	# function estimateinbatches() to prevent memory issues when images is large
-	point_estimates = estimateinbatches(Chain(θ̂, priorsupport), Z)
-	quantile_estimates = estimateinbatches(Chain(θ̂₂, priorsupport), Z)
+	point_estimates = estimateinbatches(Chain(θ̂, priorsupport), Z, use_gpu=use_gpu)
+	quantile_estimates = estimateinbatches(Chain(θ̂₂, priorsupport), Z, use_gpu=use_gpu)
 
-	# Store as N x 3 dataframe (point estimate, lower bound, upper bound)
+	# Store as N x 6 dataframe (posterior mean, 0.05 quantile, 0.25 quantile, median, 0.75 quantile, 0.95 quantile)
 	estimates = vcat(point_estimates, quantile_estimates)'
 	estimates = DataFrame(estimates, ["estimate", "lower", "25thpercentile", "median", "75thpercentile", "upper"])
 	estimates[:, :Method] .= "NBE" # save the method for plotting
@@ -125,10 +127,10 @@ function estimate(Z, θ̂, θ̂₂)
 	return estimates
 end
 
-estimates_micro_test = estimate(micro_test_images, θ̂, θ̂₂)
+estimates_micro_test = estimate(micro_test_images, θ̂, θ̂₂, use_gpu=use_gpu)
 estimates_micro_test[:, :lscale_true] = vec(micro_test_lscales) # add true values
 CSV.write("output/NBE_micro_test.csv", estimates_micro_test)
 
-estimates_test = estimate(test_images, θ̂, θ̂₂)
+estimates_test = estimate(test_images, θ̂, θ̂₂, use_gpu=use_gpu)
 estimates_test[:, :lscale_true] = vec(test_lscales) # add true values
 CSV.write("output/NBE_test.csv", estimates_test)
