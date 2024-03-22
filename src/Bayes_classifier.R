@@ -1,0 +1,145 @@
+library("ggplot2")
+library("NeuralEstimators")
+library("JuliaConnectoR")
+# Start Julia with the project of the current directory:
+Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=. --threads=auto")
+
+# Two possible models:
+# homogeneous:    Z | θ ~ N(θ, s^2), θ ~ U(0, 1), s known 
+# heterogeneous:  Z | θ ~ N(θ, θ^2), θ ~ U(0, 1)
+heterogeneous <- T
+
+a <- 0
+b <- 1
+prior <- function(n) runif(n, min = a, max = b)
+n <- 1000 # number of points used in the first plot
+theta <- prior(n) 
+thetapi <- theta[sample(1:n, n)]
+
+simulate <- function(theta) {
+  sd <- if(heterogeneous) theta else s
+  rnorm(length(theta), mean = theta, sd = sd)
+}
+z <- simulate(theta)
+
+df <- data.frame(
+  theta = c(theta, thetapi), 
+  class = rep(c("dependent", "independent"), each = n), 
+  z = z
+)
+df <- df[sample(1:nrow(df)), ] # shuffle for plotting
+
+g1 <- ggplot(df) + 
+  geom_point(aes(x = theta, y = z, colour = class), alpha = 0.8, size = 0.7) + 
+  labs(colour = "", x = expression(theta), y = "Z") + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  scale_colour_manual(values = c("blue", "red")) + 
+  theme_bw() + 
+  theme(legend.position = "top")
+
+# Bayes optimal classifier: 
+# c∗(Z, θ) = p(Z, θ){p(Z, θ) + p(Z)p(θ)}−1
+#          = p(Z | θ)p(θ){p(Z | θ)p(θ) + p(Z)p(θ)}−1
+#          = p(Z | θ){p(Z | θ) + p(Z)}−1
+# Note that p(Z) = int p(Z | θ)p(θ) dθ, which can sometimes be evaluated in 
+# closed form, and otherwise evaluated with Monte Carlo sampling.
+Bayesclassifier_singlepair <- function(z, theta) {
+
+  if (heterogeneous) {
+    likelihood <- dnorm(z, mean = theta, sd = theta)
+    theta_sample <- runif(10000, min = a, max = b)
+    evidence <- mean(dnorm(z, mean = theta_sample, sd = theta_sample))
+  } else {
+    likelihood <- dnorm(z, mean = theta, sd = s)
+    evidence <- pnorm(b, mean = z, sd = s) - pnorm(a, mean = z, sd = s)
+  }
+  
+  likelihood / (likelihood + evidence)
+}
+
+df_grid <- expand.grid(theta = seq(a, b, length = 100), z = seq(min(z), max(z), length = 100))
+df_grid$c <- apply(df_grid, 1, function(x) Bayesclassifier_singlepair(x["z"], x["theta"]))
+
+g2 <- ggplot(df_grid) + 
+  geom_raster(aes(x = theta, y = z, fill = c)) + 
+  scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', limits = c(0, 1),
+                       midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill') +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  labs(fill = "", x = expression(theta), y = "Z") + 
+  theme_bw() + 
+  theme(legend.position = "top")
+
+
+# ---- Neural likelihood-to-evidence ratio ----
+
+estimator <- juliaEval('
+  using NeuralEstimators
+  using Flux
+
+  d = 1    # dimension of each replicate
+  p = 1    # number of parameters in the statistical model
+  w = 64   # number of neurons in each hidden layer
+
+  summary_network = Chain(
+  	Dense(d, w, relu),
+  	Dropout(0.3),
+  	Dense(w, w, relu),
+  	Dropout(0.3),
+  	Dense(w, w, relu),
+  	Dropout(0.3)
+  	)
+  inference_network = Chain(
+  	Dense(w + p, w, relu),
+  	Dropout(0.3),
+  	Dense(w, w, relu),
+  	Dropout(0.3),
+  	Dense(w, 1)
+  	)
+  deepset = DeepSet(summary_network, inference_network)
+  r̂ = RatioEstimator(deepset)
+')
+
+K <- 100000
+theta_train <- prior(K) 
+theta_val   <- prior(K/10)
+Z_train     <- simulate(theta_train)
+Z_val       <- simulate(theta_val)
+
+# Coerce data to required format
+Z_train <- lapply(Z_train, as.matrix)
+Z_val <- lapply(Z_val, as.matrix)
+
+
+theta_train <- matrix(theta_train, nrow = 1)
+theta_val <- matrix(theta_val, nrow = 1)
+# estimator <- train(estimator,
+#   theta_train = theta_train,
+#   theta_val   = theta_val,
+#   Z_train = Z_train,
+#   Z_val   = Z_val
+# )
+estimator <- juliaLet('
+  train(r̂, theta_train, theta_val, Z_train, Z_val)
+', theta_train = theta_train, theta_val = theta_val, Z_train = Z_train, Z_val = Z_val)
+
+# Apply the estimator to the test data
+Z <- lapply(df_grid$z, as.matrix)
+theta <- matrix(df_grid$theta, nrow = 1)
+chat <- juliaLet('r̂(Z, theta; classifier = true) ', Z = Z, theta = theta)
+df_grid$chat <- as.numeric(chat)
+
+g3 <- ggplot(df_grid) + 
+  geom_raster(aes(x = theta, y = z, fill = chat)) + 
+  scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', limits = c(0, 1),
+                       midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill') +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  labs(fill = "", x = expression(theta), y = "Z") + 
+  theme_bw() + 
+  theme(legend.position = "top")
+
+figure <- egg::ggarrange(g1, g2, g3, nrow = 1)
+ggsave("fig/Bayes_classifier.pdf", figure, width = 8.5, height = 3.5, device = "pdf")
+

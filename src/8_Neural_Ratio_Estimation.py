@@ -8,9 +8,9 @@ from sbi import utils as utils
 from sbi.inference import simulate_for_sbi
 from sbi.neural_nets.embedding_nets import CNNEmbedding
 
-# This script illustrates the use of "amortised likeilihood-to-evidence ratio
-# estimation", implemented in SBI as the method "SNRE_A". Many other amortised
-# and sequential inference methods are available at:
+# This script illustrates the use of "amortised neural likeilihood-to-evidence
+# ratio estimation", implemented in SBI as the method "SNRE_A". Many other
+# amortised and sequential inference methods are available in the package, listed at:
 # https://sbi-dev.github.io/sbi/tutorial/16_implemented_methods/
 from sbi.inference import SNRE_A
 
@@ -75,7 +75,7 @@ file.close()
 # file.close()
 
 # Function to MCMC sample from the posterior given a set of images
-def sample(posterior, images, num_samples = 500):
+def sample(posterior, images, num_samples = 1000):
     images  = np.split(images, images.shape[0]) # split 4D array into list of arrays
     samples = map(lambda x: posterior.sample((num_samples,), x = x), images)
     samples = list(samples)
