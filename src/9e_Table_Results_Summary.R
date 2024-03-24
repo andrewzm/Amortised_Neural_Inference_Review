@@ -1,4 +1,4 @@
-# BayesFlow template R script: Estimation of length scale in Gaussian 
+# BayesFlow template R script: Estimation of length scale in Gaussian
 # Process covariance function
 #
 # Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
@@ -21,17 +21,17 @@ library(gridExtra)
 library(xtable)
 
 ## Plots for naive and MI-based summary statistics
-test_lscales <- readRDS("data/test_lscales.rds")[1:1000,,]
+test_lscales <- readRDS("data/test_params.rds")[1:1000,,]
 test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 
 summarise_method <- median
 
-method_names <- list(Metropolis_Hastings= "MCMC", 
-                     BayesFlow = "NF-NMP", 
-                     VB = "TG-NVI", 
-                     VB_MDN = "TMDN-NVI", 
-                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
+method_names <- list(Metropolis_Hastings= "MCMC",
+                     BayesFlow = "NF-NMP",
+                     VB = "TG-NVI",
+                     VB_MDN = "TMDN-NVI",
+                     VB_Synthetic_Naive = "TG-NVI-Synth1",
+                     VB_Synthetic_MutualInf= "TG-NVI-Synth2",
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -59,17 +59,17 @@ crps <- function(z, samples, summarise = mean) {
    col_shuffle <- sample(1:nsamples)
    z <- matrix(z, nrow = length(z), ncol = nsamples,
                byrow = FALSE)
-   Score <- (rowMeans(abs(z - samples)) - 
-   0.5 * rowMeans(abs(z - samples[, col_shuffle]))) 
+   Score <- (rowMeans(abs(z - samples)) -
+   0.5 * rowMeans(abs(z - samples[, col_shuffle])))
    summarise(Score)
 }
 preds <- results_crps <- NULL
 
-for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE",    
+for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE",
                 "VB", "VB_MDN", "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
-   results_crps[[method]] <- crps(drop(test_lscales), 
-                                  drop(preds[[method]]), 
+   results_crps[[method]] <- crps(drop(test_lscales),
+                                  drop(preds[[method]]),
                                   summarise = summarise_method)
 }
 results_crps <- data.frame(results_crps) %>% gather(Method, CRPS)
@@ -92,12 +92,12 @@ all_results$Upper <- lapply(preds,
                    gather(Method, Upper) %>%
                    pull(Upper)
 
-all_results$Method <- factor(all_results$Method, 
+all_results$Method <- factor(all_results$Method,
                              levels = unique(all_results$Method))
- 
 
-NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate, Lower = lower, Upper = upper) 
-NBE <- NBE[1:1000, ] 
+
+NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate, Lower = lower, Upper = upper)
+NBE <- NBE[1:1000, ]
 all_results <- bind_rows(all_results, NBE)
 
 all_results$Method <- c(method_names[all_results$Method])
@@ -110,15 +110,15 @@ mape_sd <- function(truth, est) {
 
 all_results <- mutate(all_results, Error = (lscale_true - Est))
 all_results$Error_NMP <- filter(all_results, Method == "NF-NMP")$Error
-all_results$group <- cut(all_results$lscale_true, 
+all_results$group <- cut(all_results$lscale_true,
                          breaks = seq(0, 0.6, by = 0.1))
-g <- ggplot(filter(all_results, Method == "TG-NVI")) + 
-    geom_point(aes(x = Error, y = (abs(Error_NMP)) , colour = Method)) + 
+g <- ggplot(filter(all_results, Method == "TG-NVI")) +
+    geom_point(aes(x = Error, y = (abs(Error_NMP)) , colour = Method)) +
     geom_hline(aes(yintercept = 0)) + theme_bw()
 
-g <- ggplot(all_results) + 
+g <- ggplot(all_results) +
     geom_smooth(aes(x = lscale_true, y = abs(Error), colour = Method), method = "loess") +
-    #geom_point(aes(lscale_true, y = (Error) , colour = Method)) + 
+    #geom_point(aes(lscale_true, y = (Error) , colour = Method)) +
     geom_hline(aes(yintercept = 0)) + theme_bw()
 
 XX <- group_by(all_results, Method, group) %>%
@@ -126,8 +126,8 @@ XX <- group_by(all_results, Method, group) %>%
             APE = abs(lscale_true -  Est),
             IS90 = is90(lscale_true, Lower, Upper, summarise = I)) %>%
    gather(Diagnostic, Value, -Method, -group)
-g <- ggplot(XX) + 
-    geom_boxplot(aes(x = group, y = Value, colour = Method)) + 
+g <- ggplot(XX) +
+    geom_boxplot(aes(x = group, y = Value, colour = Method)) +
     facet_wrap(~Diagnostic, scales = "free", ncol = 2) +
     theme_bw()
 print(g)
@@ -145,7 +145,7 @@ my_xtable <- group_by(all_results, Method) %>%
             COV90 = cov90(lscale_true, Lower, Upper)) %>%
    left_join(results_crps, by = "Method") %>%
    arrange(RMSPE) %>%
-xtable(digits = 3) 
+xtable(digits = 3)
 
 latex <- my_xtable %>%  print(include.rownames = FALSE, only.contents = TRUE)
 latex_standalone <- my_xtable %>%  print()
@@ -163,5 +163,5 @@ writeLines(
 writeLines(latex, "fig/results_table.tex")
 
 tools::texi2pdf("fig/results_table_standalone.tex", clean = TRUE)
-file.rename(from = "results_table_standalone.pdf",  
+file.rename(from = "results_table_standalone.pdf",
             to = "fig/results_table_standalone.pdf")

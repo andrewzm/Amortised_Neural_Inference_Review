@@ -1,4 +1,4 @@
-# BayesFlow template R script: Estimation of length scale in Gaussian 
+# BayesFlow template R script: Estimation of length scale in Gaussian
 # Process covariance function
 #
 # Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
@@ -36,7 +36,7 @@ set.seed(1)
 dist = tfp$distributions$Normal(loc = 0, scale = 1)
 
 ## Set up parameters
-ngrid <- 16L                        # Number of grid points in each dimension  
+ngrid <- 16L                        # Number of grid points in each dimension
 ngrid_squared <- as.integer(16^2)   # Number of grid points squared
 
 ## Set up spatial grid on [0, 1] x [0, 1]
@@ -45,8 +45,8 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 
 ## Find distance matrix for these grid points
 D <- fields::rdist(sgrid)
-D_tf <- tf$expand_dims(tf$constant(D, 
-                        dtype = "float32"), 
+D_tf <- tf$expand_dims(tf$constant(D,
+                        dtype = "float32"),
                       0L)
 
 ## Find a mask for the distance matrix to be used in the summary statistic
@@ -70,8 +70,8 @@ summ_stat <- function(Z, D_mask, long = TRUE) {
 }
 
 ## VB Recognition model
-phi_est <- CNN(nconvs = 2L, 
-               ngrid = ngrid, 
+phi_est <- CNN(nconvs = 2L,
+               ngrid = ngrid,
                kernel_sizes = c(3L, 3L),
                filter_num = c(64L, 128L),
                method = "VB")
@@ -79,22 +79,22 @@ phi_est <- CNN(nconvs = 2L,
 ## Binding function model with naive summ statistic (fully connected)
 summ_stat_input <- layer_input(shape = c(1L,1L))
   dense_layer1 <- layer_dense(summ_stat_input, 16L) %>%
-      layer_activation_leaky_relu() 
+      layer_activation_leaky_relu()
   dense_layer2 <- layer_dense(dense_layer1, 16L) %>%
-      layer_activation_leaky_relu() 
+      layer_activation_leaky_relu()
   mean_summ_stat_net <- layer_dense(dense_layer2, 1L)
   log_sd_summ_stat_net <- layer_dense(dense_layer2, 1L)
-  summ_stat_net <- keras_model(summ_stat_input, 
+  summ_stat_net <- keras_model(summ_stat_input,
                         list(mean_summ_stat_net, log_sd_summ_stat_net))
 
 ## Train the binding function network
 cat("Loading data\n")
 train_images <- readRDS("data/train_images.rds")
-train_lscales <- readRDS("data/train_lscales.rds")
+train_lscales <- readRDS("data/train_params.rds")
 val_images <- readRDS("data/val_images.rds")
-val_lscales <- readRDS("data/val_lscales.rds")
+val_lscales <- readRDS("data/val_params.rds")
 test_images <- readRDS("data/test_images.rds")
-test_lscales <- readRDS("data/test_lscales.rds")
+test_lscales <- readRDS("data/test_params.rds")
 
 if(file.exists("data/naive_summary_statistics.rds")) {
   cat("Loading naive summary statistics from file\n")
@@ -102,7 +102,7 @@ if(file.exists("data/naive_summary_statistics.rds")) {
                      tf$constant(dtype = "float32")
 } else {
    cat("Computing naive summary statistics\n")
-  train_summ_stat <- summ_stat(train_images %>% tf$constant(dtype = "float32"), 
+  train_summ_stat <- summ_stat(train_images %>% tf$constant(dtype = "float32"),
                              D_mask_tf, long = FALSE)
   saveRDS(as.array(train_summ_stat), "data/naive_summary_statistics.rds")
 }
@@ -120,7 +120,7 @@ checkpoint_callback <- callback_model_checkpoint(
 
 if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")) {
    synth_lik_est %>% compile(optimizer = 'adam')
-   vae_synth <- model_vae(phi_est, 
+   vae_synth <- model_vae(phi_est,
                       summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
                       synthetic = TRUE,
                       summ_stat_network = synth_lik_est$summ_stat_network)
@@ -130,30 +130,30 @@ if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")) {
 } else {
 
   synth_lik_est %>% compile(optimizer = 'adam')
-  history <- synth_lik_est %>% fit(train_lscales, 
-                              train_summ_stat, 
+  history <- synth_lik_est %>% fit(train_lscales,
+                              train_summ_stat,
                               epochs = 10,
                               batch_size = 64L)
-  synth_lik_est %>%  fit(train_lscales, 
+  synth_lik_est %>%  fit(train_lscales,
                           train_summ_stat,
                           epochs = 10,
                           batch_size = 2048L)
 
   ## Save binding function data for plotting
-  test_summ_stat <- summ_stat(test_images %>% tf$constant(dtype = "float32"), 
+  test_summ_stat <- summ_stat(test_images %>% tf$constant(dtype = "float32"),
                               D_mask_tf, long = FALSE) %>% as.array()
   grid_l <- tf$constant(matrix(seq(0, 0.6, by = 0.001)))
   pred_mean <- synth_lik_est$summ_stat_network$predict(grid_l)[[1]]
-  pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp()) 
-  df_for_plot <- data.frame(l = as.numeric(grid_l), 
-                              mu = as.numeric(pred_mean), 
+  pred_sd <- (synth_lik_est$summ_stat_network$predict(grid_l)[[2]] %>% exp())
+  df_for_plot <- data.frame(l = as.numeric(grid_l),
+                              mu = as.numeric(pred_mean),
                               sd = as.numeric(pred_sd))
-  save(test_summ_stat, df_for_plot, 
+  save(test_summ_stat, df_for_plot,
           file = "output/VB_Synthetic_Naive_SummStat_data.rda")
 
   ## Incorporate within VAE
   cat("Incorporating binding function within VAE\n")
-  vae_synth <- model_vae(phi_est, 
+  vae_synth <- model_vae(phi_est,
                       summ_stat_compute = function(Z)  summ_stat(Z, D_mask_tf, long = FALSE),
                       synthetic = TRUE,
                       summ_stat_network = synth_lik_est$summ_stat_network)
@@ -164,30 +164,30 @@ if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")) {
     vae_synth %>% compile(
                   optimizer = optimizer_adam(
                                   learning_rate = 0.0002))
-      
-    history <- vae_synth %>% fit(train_images, 
-                  epochs = 10L, 
+
+    history <- vae_synth %>% fit(train_images,
+                  epochs = 10L,
                   shuffle = TRUE,
                   batch_size = 512L,
                   callbacks = list(checkpoint_callback))
 
-    # vae_synth %>% compile(optimizer = 
+    # vae_synth %>% compile(optimizer =
     #                     optimizer_adam(
     #                         learning_rate = 0.001),)
 
-    # vae_synth %>% fit(train_images, 
-    #             epochs = 5L, 
+    # vae_synth %>% fit(train_images,
+    #             epochs = 5L,
     #             shuffle = TRUE,
     #             batch_size = 2048,
     #             callbacks = list(checkpoint_callback))
 }
 
-  
+
 ## Testing with full test data
 pred_VB_trans_mean <- vae_synth$encoder$predict(test_images)[[1]]
 pred_VB_trans_sd <- exp(vae_synth$encoder$predict(test_images)[[2]])
-VB_samples <- rnorm(n = 500 * dim(test_images)[1], 
-                pred_VB_trans_mean, 
+VB_samples <- rnorm(n = 500 * dim(test_images)[1],
+                pred_VB_trans_mean,
                 pred_VB_trans_sd) %>%
             matrix(ncol = 500L) %>% trans_sigmoid()
 
@@ -196,8 +196,8 @@ VB_samples <- rnorm(n = 500 * dim(test_images)[1],
 test_micro_images <- readRDS("data/micro_test_images.rds")
 pred_VB_trans_mean <- vae_synth$encoder$predict(test_micro_images)[[1]]
 pred_VB_trans_sd <- exp(vae_synth$encoder$predict(test_micro_images)[[2]])
-VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1], 
-                pred_VB_trans_mean, 
+VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1],
+                pred_VB_trans_mean,
                 pred_VB_trans_sd) %>%
             matrix(ncol = 500L) %>% trans_sigmoid()
 
@@ -206,7 +206,7 @@ saveRDS(VB_samples, "output/VB_Synthetic_Naive_test.rds")
 saveRDS(VB_samples_micro, "output/VB_Synthetic_Naive_micro_test.rds")
 
 
-# p <- ggplot(df_for_plot) +  
+# p <- ggplot(df_for_plot) +
 #       geom_point(data = data.frame(l = as.numeric(test_lscales),
 #                                     s = as.numeric(test_summ_stat)),
 #                                   aes(l, s), col = "red", size = 0.2) +
@@ -215,12 +215,12 @@ saveRDS(VB_samples_micro, "output/VB_Synthetic_Naive_micro_test.rds")
 #       theme_bw() +
 #       theme(text = element_text(size = 7),
 #               legend.title = element_blank())
-                                  
+
 #   ggsave("fig/summ_stats.png", p, width = 8, height = 4)
 
 #   p <- p + geom_line(aes(l, mu), col = "black") +
-#         geom_line(aes(l, mu + 1.95*sd), col = "blue", linetype = "dashed") + 
-#         geom_line(aes(l, mu - 1.95*sd), col = "blue", linetype = "dashed") 
-                      
-      
+#         geom_line(aes(l, mu + 1.95*sd), col = "blue", linetype = "dashed") +
+#         geom_line(aes(l, mu - 1.95*sd), col = "blue", linetype = "dashed")
+
+
 #   ggsave("fig/synth_lik.png", p, width = 8, height = 4)
