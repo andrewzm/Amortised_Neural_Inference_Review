@@ -27,11 +27,11 @@ test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 summarise_method <- median
 
 method_names <- list(Metropolis_Hastings= "MCMC", 
-                     BayesFlow = "NF-NMP", 
-                     VB = "TG-NVI", 
-                     VB_MDN = "TMDN-NVI", 
-                     VB_Synthetic_Naive = "TG-NVI-Synth1", 
-                     VB_Synthetic_MutualInf= "TG-NVI-Synth2", 
+                     BayesFlow = "fKL", 
+                     VB = "rKL1", 
+                     #VB_MDN = "TMDN-NVI", 
+                     VB_Synthetic_Naive = "rKL2", 
+                     VB_Synthetic_MutualInf= "rKL3", 
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -66,7 +66,8 @@ crps <- function(z, samples, summarise = mean) {
 preds <- results_crps <- NULL
 
 for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE",    
-                "VB", "VB_MDN", "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
+                "VB", #"VB_MDN", 
+                "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales), 
                                   drop(preds[[method]]), 
@@ -109,10 +110,10 @@ mape_sd <- function(truth, est) {
 }
 
 all_results <- mutate(all_results, Error = (lscale_true - Est))
-all_results$Error_NMP <- filter(all_results, Method == "NF-NMP")$Error
+all_results$Error_NMP <- filter(all_results, Method == "fKL")$Error
 all_results$group <- cut(all_results$lscale_true, 
                          breaks = seq(0, 0.6, by = 0.1))
-g <- ggplot(filter(all_results, Method == "TG-NVI")) + 
+g <- ggplot(filter(all_results, Method == "rKL1")) + 
     geom_point(aes(x = Error, y = (abs(Error_NMP)) , colour = Method)) + 
     geom_hline(aes(yintercept = 0)) + theme_bw()
 
@@ -121,17 +122,33 @@ g <- ggplot(all_results) +
     #geom_point(aes(lscale_true, y = (Error) , colour = Method)) + 
     geom_hline(aes(yintercept = 0)) + theme_bw()
 
-XX <- group_by(all_results, Method, group) %>%
-  transmute(SPE = (lscale_true - Est)^2,
+# XX <- group_by(all_results, Method, group) %>%
+#   transmute(SPE = (lscale_true - Est)^2,
+#             APE = abs(lscale_true -  Est),
+#             IS90 = is90(lscale_true, Lower, Upper, summarise = I)) %>%
+#    gather(Diagnostic, Value, -Method, -group)
+# g <- ggplot(XX) + 
+#     geom_boxplot(aes(x = group, y = Value, colour = Method)) + 
+#     facet_wrap(~Diagnostic, scales = "free", ncol = 2) +
+#     theme_bw()
+# print(g)
+# ggsave("temp.png", g, width = 10, height = 10, dpi = 300)
+
+
+densities_scores <- group_by(all_results, Method) %>%
+      transmute(SPE = (lscale_true - Est)^2,
             APE = abs(lscale_true -  Est),
             IS90 = is90(lscale_true, Lower, Upper, summarise = I)) %>%
-   gather(Diagnostic, Value, -Method, -group)
-g <- ggplot(XX) + 
-    geom_boxplot(aes(x = group, y = Value, colour = Method)) + 
-    facet_wrap(~Diagnostic, scales = "free", ncol = 2) +
+       gather(Diagnostic, Value, -Method)
+
+g <- ggplot(densities_scores) + 
+    geom_density(aes(x = Value, colour = Method), linewidth = 0.3) + 
+    facet_wrap(~Diagnostic, scales = "free") +
     theme_bw()
 print(g)
-ggsave("temp.png", g, width = 10, height = 10, dpi = 300)
+
+ggsave("fig/scores_densities.png", g, width = 7.2, height = 3)
+
 
 results_crps$Method <- c(method_names[results_crps$Method])
 results_crps$Method <- factor(results_crps$Method,
@@ -140,8 +157,7 @@ results_crps$Method <- factor(results_crps$Method,
 my_xtable <- group_by(all_results, Method) %>%
   summarise(RMSPE = rmspe(lscale_true, Est, summarise = summarise_method),
             MAPE = mae(lscale_true, Est, summarise = summarise_method),
-            MAPE_sd = mape_sd(lscale_true, Est),
-            IS90 = is90(lscale_true, Lower, Upper, summarise = summarise_method),
+            MIS90 = is90(lscale_true, Lower, Upper, summarise = summarise_method),
             COV90 = cov90(lscale_true, Lower, Upper)) %>%
    left_join(results_crps, by = "Method") %>%
    arrange(RMSPE) %>%
@@ -165,3 +181,5 @@ writeLines(latex, "fig/results_table.tex")
 tools::texi2pdf("fig/results_table_standalone.tex", clean = TRUE)
 file.rename(from = "results_table_standalone.pdf",  
             to = "fig/results_table_standalone.pdf")
+
+

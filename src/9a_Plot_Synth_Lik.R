@@ -24,8 +24,8 @@ library(gtable)
 test_lscales <- readRDS("data/test_lscales.rds")
 
 summ_data <- summ_test <- NULL
-method_names <- list(Naive = "TG-NVI-Synth1", 
-                     MutualInf = "TG-NVI-Synth2")
+method_names <- list(Naive = "rKL2", 
+                     MutualInf = "rKL3")
 for(method in c("Naive", "MutualInf")) {
 
     load(paste0("output/VB_Synthetic_", method, "_SummStat_data.rda"))
@@ -48,7 +48,7 @@ summ_test$method <- factor(summ_test$method,
 
 p <- ggplot(summ_data) +  
     geom_point(data = summ_test, aes(l, s), col = "red", size = 0.2) +
-    facet_wrap(~method, scales = "free", ncol = 2) +
+    facet_wrap(~method, scales = "free", ncol = 1) +
     xlab(expression(theta)) + 
     ylab(expression(S(bold(Z)))) +
     xlim(-0.1, 0.7) +
@@ -64,5 +64,5 @@ p <- ggplot(summ_data) +
     theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 0.98))
 
-ggsave(paste0("fig/synth_liks.png"), p, width = 3.6, height = 2.4)
+ggsave(paste0("fig/synth_liks.png"), p, width = 2.6, height = 3.3)
 
