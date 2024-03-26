@@ -20,19 +20,19 @@ library(gtable)
 library(grid)
 
 ## Plots for naive and MI-based summary statistics
-test_lscales <- readRDS("data/test_lscales.rds")[1:1000,, ]
+test_lscales <- readRDS("data/test_params.rds")[1:1000,, ]
 preds <- list()
-method_names <- list(Metropolis_Hastings= "MCMC", 
-                     BayesFlow = "fKL", 
-                     VB = "rKL1", 
-                     VB_Synthetic_Naive = "rKL2", 
-                     VB_Synthetic_MutualInf= "rKL3", 
+method_names <- list(Metropolis_Hastings= "MCMC",
+                     BayesFlow = "fKL",
+                     VB = "rKL1",
+                     VB_Synthetic_Naive = "rKL2",
+                     VB_Synthetic_MutualInf= "rKL3",
                      NRE = "NRE",
                      NBE = "NBE")
 
 ## Methods that sample from the posterior
-for(method in c("Metropolis_Hastings", "BayesFlow", "VB", 
-                "VB_Synthetic_Naive", 
+for(method in c("Metropolis_Hastings", "BayesFlow", "VB",
+                "VB_Synthetic_Naive",
                 "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
    preds[[method]] <- preds[[method]][1:1000, ] # Only keep 1000 test points
@@ -45,7 +45,7 @@ point_summaries <- lapply(preds,
                    gather(Method, Est, -lscale_true)
 
 ## Add point summaries from Neural Bayes estimator
-NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate) 
+NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate)
 point_summaries <- bind_rows(point_summaries, NBE[1:1000, ])
 
 point_summaries$Method <- c(method_names[point_summaries$Method])
@@ -54,13 +54,13 @@ point_summaries$Method <- factor(point_summaries$Method,
 
 ## Now make facet grid of scatter plots for each method
 ## with identity line
-p <- ggplot(point_summaries) + 
+p <- ggplot(point_summaries) +
     geom_point(aes(lscale_true, Est, col = Method), size = 0.2) +
     geom_abline(intercept = 0, slope = 1, col = "black") +
     xlab(expression(theta)) + ylab(expression(hat(theta))) +
     theme_bw() +
     coord_fixed() +
-    scale_x_continuous(expand = c(0.01, 0.01)) + 
+    scale_x_continuous(expand = c(0.01, 0.01)) +
     scale_y_continuous(expand = c(0.01, 0.01)) +
     theme(text = element_text(size = 10),
           legend.title = element_blank(),

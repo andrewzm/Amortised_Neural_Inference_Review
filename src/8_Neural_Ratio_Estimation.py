@@ -8,6 +8,11 @@ from sbi import utils as utils
 from sbi.inference import simulate_for_sbi
 from sbi.neural_nets.embedding_nets import CNNEmbedding
 
+# Which model are we using? Either the Gaussian process "GP", or inverted
+# max-stable process "MSP"
+model = "MSP" # "MSP
+path_modifier = model == "GP" ? "" : "_MSP"
+
 # This script illustrates the use of "amortised neural likeilihood-to-evidence
 # ratio estimation", implemented in SBI as the method "SNRE_A". Many other
 # amortised and sequential inference methods are available in the package, listed at:
@@ -22,15 +27,13 @@ def loaddata(file_path):
     torch_array = torch_array.float()
     return torch_array
 
-
-
 train_images  = loaddata("data/train_images.rds")
 val_images    = loaddata("data/val_images.rds")
 test_images   = loaddata("data/test_images.rds")
-train_lscales = loaddata("data/train_lscales.rds")
-val_lscales   = loaddata("data/val_lscales.rds")
-test_lscales  = loaddata("data/test_lscales.rds")
-micro_test_lscales = loaddata("data/micro_test_lscales.rds")
+train_params = loaddata("data/train_params.rds")
+val_params   = loaddata("data/val_params.rds")
+test_params  = loaddata("data/test_params.rds")
+micro_test_params = loaddata("data/micro_test_params.rds")
 micro_test_images  = loaddata("data/micro_test_images.rds")
 
 # Construct the classifier...
@@ -54,8 +57,8 @@ prior = utils.BoxUniform(low=torch.zeros(p), high=0.6 * torch.ones(p))
 inference = SNRE_A(prior, classifier = classifier) #, device = device)
 
 # Add simulations to inference object
-inference = inference.append_simulations(train_lscales, train_images)
-inference = inference.append_simulations(val_lscales, val_images)
+inference = inference.append_simulations(train_params, train_images)
+inference = inference.append_simulations(val_params, val_images)
 
 # Train the amortised likelihood-to-evidence ratio estimator
 ratio_estimator = inference.train()
