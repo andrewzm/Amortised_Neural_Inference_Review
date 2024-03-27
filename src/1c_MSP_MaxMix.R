@@ -28,10 +28,10 @@ for(test_type in c("all", "micro")) {
     for(i in 1:nrow(test_params)) {
         X <- t(as.vector(test_images[i,,,1] ))
         IMSP <- -1/log(1-exp(-X))
-        image.plot(x = seq(0,1,length=16),
-                y = seq(0,1,length=16),
-                z = (matrix(log(IMSP[1,]), nrow = 16, ncol = 16)),
-                xlab = "x", ylab = "y", main = "Max-stable")
+        # image.plot(x = seq(0,1,length=16),
+        #         y = seq(0,1,length=16),
+        #         z = (matrix(log(IMSP[1,]), nrow = 16, ncol = 16)),
+        #         xlab = "x", ylab = "y", main = "Max-stable")
 
         fit <- fitIMSP(data = IMSP,
                     coord = s,
