@@ -24,7 +24,7 @@ Rscript src/2_GP_MCMC.R
 Rscript src/2_MSP_MaxMix.R
 
 # Run neural methods
-for statmodel in GP MSP
+for statmodel in GP 
 do
     echo ""
     echo "##### Starting experiments for $statmodel model #####"
@@ -39,6 +39,17 @@ do
     Rscript src/7_NBE.R --statmodel=$statmodel
     Rscript src/8_NRE.R --statmodel=$statmodel
 done
+
+for statmodel in MSP
+do
+    echo ""
+    echo "##### Starting experiments for $statmodel model #####"
+    echo ""
+    Rscript src/3_fKL.R --statmodel=$statmodel
+    Rscript src/7_NBE.R --statmodel=$statmodel
+    Rscript src/8_NRE.R --statmodel=$statmodel
+done
+
 
 # Plot the results
 Rscript src/9a_Plot_Synth_Lik.R 
