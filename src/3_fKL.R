@@ -15,14 +15,14 @@
 # GNU General Public License for more details.
 
 ##  Load core R packages  
-library(fields)
-library(dplyr)
+library("fields")
+library("dplyr")
 
 ## Load BayesFlow in R Conda -- note, needs to be changed according to your system
 library("reticulate")
 use_condaenv("~/miniconda3/envs/BayesFlow")
-library(tensorflow)
-library(keras)
+library("tensorflow")
+library("keras")
 
 ## Variables to easily access package functions
 layers <- tf$keras$layers
@@ -33,10 +33,10 @@ tfp <- import("tensorflow_probability")
 
 ## Load Auxiliary R functions
 source("src/utils.R")
+source("src/setup.R")
 
 ## Set up configuration
-case <- "MSP"
-settings <- config_setup(case = case, method_name = "BayesFlow")
+settings <- config_setup(statmodel = statmodel, method_name = "BayesFlow")
 
 
 ## Fix seed

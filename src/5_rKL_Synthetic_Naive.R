@@ -28,6 +28,7 @@ tfp <- import("tensorflow_probability")
 
 ## Load Auxiliary R functions
 source("src/utils.R")
+source("src/setup.R")
 
 ## Fix seed
 set.seed(1)

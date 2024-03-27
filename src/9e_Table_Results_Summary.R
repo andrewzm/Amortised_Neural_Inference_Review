@@ -65,8 +65,8 @@ crps <- function(z, samples, summarise = mean) {
 }
 preds <- results_crps <- NULL
 
-for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE",
-                "VB", #"VB_MDN",
+for(method in c("Metropolis_Hastings",  "BayesFlow", 
+                "VB", #"VB_MDN", 
                 "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales),
