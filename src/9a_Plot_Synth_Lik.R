@@ -1,4 +1,4 @@
-# BayesFlow template R script: Estimation of length scale in Gaussian 
+# BayesFlow template R script: Estimation of length scale in Gaussian
 # Process covariance function
 #
 # Author: Andrew Zammit-Mangion, azm (at) uow.edu.au
@@ -24,8 +24,8 @@ library(gtable)
 test_lscales <- readRDS("data/test_params.rds")
 
 summ_data <- summ_test <- NULL
-method_names <- list(Naive = "TG-NVI-Synth1",
-                     MutualInf = "TG-NVI-Synth2")
+method_names <- list(Naive = "rKL2",
+                     MutualInf = "rKL3")
 for(method in c("Naive", "MutualInf")) {
 
     load(paste0("output/VB_Synthetic_", method, "_SummStat_data.rda"))

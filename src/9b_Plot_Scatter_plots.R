@@ -23,10 +23,10 @@ library(grid)
 test_lscales <- readRDS("data/test_params.rds")[1:1000,, ]
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC",
-                     BayesFlow = "NF-NMP",
-                     VB = "TG-NVI",
-                     VB_Synthetic_Naive = "TG-NVI-Synth1",
-                     VB_Synthetic_MutualInf= "TG-NVI-Synth2",
+                     BayesFlow = "fKL",
+                     VB = "rKL1",
+                     VB_Synthetic_Naive = "rKL2",
+                     VB_Synthetic_MutualInf= "rKL3",
                      NRE = "NRE",
                      NBE = "NBE")
 
@@ -64,10 +64,11 @@ p <- ggplot(point_summaries) +
     scale_y_continuous(expand = c(0.01, 0.01)) +
     theme(text = element_text(size = 10),
           legend.title = element_blank(),
+          legend.position = "bottom",
           panel.spacing = unit(0.8, "lines")) +
       theme(strip.text = element_text(size = 6)) +
-    facet_wrap(~Method, nrow = 2)  +
-    labs(tag = "(b)") +
+    facet_wrap(~Method, nrow = 1)  +
+    labs(tag = "(c)") +
     theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 0.98))
 
@@ -75,8 +76,8 @@ p <- ggplot(point_summaries) +
 g <- ggplotGrob(p)
 legend <- gtable_filter(g, "guide-box")
 # Save or display the legend separately
-png("fig/scatter_plot_legend.png", width = 400, height = 1000, res = 300) # Adjust size as needed
+png("fig/scatter_plot_legend.png", width = 1000, height = 400, res = 300) # Adjust size as needed
 grid.draw(legend)
 dev.off()
 
-ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 3.6, height = 2.4)
+ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 7.2, height = 1.7)

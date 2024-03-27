@@ -31,16 +31,17 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 ## Methods that sample from the posterior
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC",
-                     BayesFlow = "NF-NMP",
-                     VB = "TG-NVI",
-                     VB_MDN = "TMDN-NVI", 
-                     VB_Synthetic_Naive = "TG-NVI-Synth1",
-                     VB_Synthetic_MutualInf= "TG-NVI-Synth2",
+                     BayesFlow = "fKL",
+                     VB = "rKL1",
+                     #VB_MDN = "rKL2",
+                     VB_Synthetic_Naive = "rKL2",
+                     VB_Synthetic_MutualInf= "rKL3",
                      NRE = "NRE",
                      NBE = "NBE")
 
 for(method in c( "Metropolis_Hastings", "BayesFlow",
-                "VB", "VB_MDN", "VB_Synthetic_Naive",
+                "VB", #"VB_MDN",
+                "VB_Synthetic_Naive",
                 "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_micro_test.rds"))
 
@@ -89,9 +90,9 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       coord_fixed() +
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = c(0, 0)) +
-      labs(tag = "(d)") +
+      labs(tag = "(b)") +
       theme(plot.tag = element_text(face = "bold", size = 10),
-          plot.tag.position = c(0.02, 1.1))
+          plot.tag.position = c(0.02, 1.0))
 
 LL <- data.frame(lscale_true = rep(3,3))
 density_plots <- ggplot(samples_all) +
@@ -128,4 +129,5 @@ g_all <- grid.arrange(
   nrow = 2, newpage = FALSE
 )
 
-ggsave("fig/micro_test_plots.png", g_all, width = 3.6, height = 3.3)
+ggsave("fig/micro_test_plots.png", g_all, width = 4.6, height = 3.3)
+

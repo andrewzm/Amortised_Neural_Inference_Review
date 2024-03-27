@@ -92,7 +92,7 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       coord_fixed() +  
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = c(0, 0)) +
-      labs(tag = "(d)") +
+      labs(tag = "(a)") +
       theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 1.1))
 
@@ -105,9 +105,9 @@ scatter_plots <- ggplot(samples_all) +
            geom_point(aes(x = param1_true, y = param2_true), 
                         size = 1, col = "dark green") +
            geom_point(data = CompLikEst, aes(x = param1, y = param2), 
-                      size = 1, col = "blue", shape = 3) +
+                      size = 2, col = "#1f77b4", shape = 3) +
            geom_point(data = BayesFlowMean, aes(x = param1, y = param2), 
-                      size = 1, col = "dark red", shape = 3)  +
+                      size = 2, col = "black", shape = 3)  +
            facet_wrap(~ params_true, scales = "free_y",
                       labeller = label_bquote(theta[true] == .(params_true))) +
            xlab(expression(theta)) + 

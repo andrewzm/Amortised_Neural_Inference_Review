@@ -128,7 +128,7 @@ cat("Applying to test data...\n")
 ## Run the amortizer on test data
 test_images <- readRDS(settings$fname_test_data)
 test_micro_images <- readRDS(settings$fname_micro_test_data)
-
+stop()
 ## Posterior samples from BayesFlow on test cases
 BayesFlow_synth_samples <- amortizer$sample(list(summary_conditions = test_images), 
                                    n_samples = 1000L) %>% 
