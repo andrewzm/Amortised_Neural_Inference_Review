@@ -1,6 +1,6 @@
-library(SpatialExtremes)
-library(fields)
-library(geoR)
+library("SpatialExtremes")
+library("fields")
+library("geoR")
 source("src/utils_MaxMix.R")
 
 set.seed(1)

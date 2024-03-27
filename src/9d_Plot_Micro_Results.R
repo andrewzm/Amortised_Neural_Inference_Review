@@ -87,6 +87,8 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
             legend.margin = margin(t = -18, r  = -10, unit = "pt"),
             panel.spacing = unit(1.2, "lines")) +
       coord_fixed() +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
       labs(tag = "(d)") +
       theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 1.1))

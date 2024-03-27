@@ -30,11 +30,13 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 
 ## Methods that sample from the posterior
 preds <- list()
-method_names <- list(BayesFlow = "NF-NMP")
+method_names <- list(BayesFlow = "NF-NMP", NRE = "NRE")
 
-for(method in c("BayesFlow")) {
+for(method in c("BayesFlow", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_MSP_micro_test.rds"))
 }
+
+preds %>% names
 
 ## Point summaries from Neural Bayes estimator
 ##NBE <- read.csv("output/NBE_micro_test.csv")
@@ -88,9 +90,15 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
             legend.margin = margin(t = -18, r  = -10, unit = "pt"),
             panel.spacing = unit(1.2, "lines")) +
       coord_fixed() +  
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
       labs(tag = "(d)") +
       theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 1.1))
+
+
+## Randomise plotting order 
+samples_all <- samples_all[sample(1:nrow(samples_all)), ]
 
 scatter_plots <- ggplot(samples_all) + 
            geom_point(aes(x = param1, y = param2, colour = Method), alpha = 1, size = 0.1) + 

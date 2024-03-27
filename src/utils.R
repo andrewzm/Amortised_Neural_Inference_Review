@@ -469,38 +469,3 @@ model_MINet <- new_model_class(
   }
 )
 
-config_setup <- function(case, method_name) {
-  settings <- list()
-  if(case == "GP") {
-    settings$fname_train_data <- "data/train_images.rds"
-    settings$fname_train_params <- "data/train_params.rds"
-    settings$fname_val_data <- "data/val_images.rds"
-    settings$fname_val_params <- "data/val_params.rds"
-    settings$fname_test_data <- "data/test_images.rds"
-    settings$fname_test_params <- "data/test_params.rds"
-    settings$fname_micro_test_data <- "data/micro_test_images.rds"
-    settings$fname_micro_test_params <- "data/micro_test_params.rds"
-    settings$ckpt_path <- paste0("ckpts/", method_name, "/")
-    settings$output_path <- paste0("output/", method_name, "_test.rds")
-    settings$output_micro_path <- paste0("output/", method_name, "_micro_test.rds")
-    settings$support <- 0.6
-    settings$num_params <- 1L
-  } else if(case == "MSP") {
-    settings$fname_train_data <- "data/train_MSP_images.rds"
-    settings$fname_train_params <- "data/train_MSP_params.rds"
-    settings$fname_val_data <- "data/val_MSP_images.rds"
-    settings$fname_val_params <- "data/val_MSP_params.rds"
-    settings$fname_test_data <- "data/test_MSP_images.rds"
-    settings$fname_test_params <- "data/test_MSP_params.rds"
-    settings$fname_micro_test_data <- "data/micro_MSP_test_images.rds"
-    settings$fname_micro_test_params <- "data/micro_MSP_test_params.rds"
-    settings$ckpt_path <- paste0("ckpts/", method_name, "_MSP/")
-    settings$output_path <- paste0("output/", method_name, "_MSP_test.rds")
-    settings$output_micro_path <- paste0("output/", method_name, "_MSP_micro_test.rds")
-    settings$support <- c(0.6, 3)
-    settings$num_params <- 2L
-  } else {
-    stop("Method must be GP or MSP")
-  }
-  settings
-}
