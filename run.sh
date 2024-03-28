@@ -37,7 +37,8 @@ do
     Rscript src/6_rKL_Synthetic_MutualInf.R --statmodel=$statmodel
     
     Rscript src/7_NBE.R --statmodel=$statmodel
-    Rscript src/8_NRE.R --statmodel=$statmodel
+    python src/8_NRE_SBI.py 
+    python src/8_NRE_SBI.R 
 done
 
 for statmodel in MSP
