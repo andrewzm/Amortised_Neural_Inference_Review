@@ -1,13 +1,13 @@
 library("ggplot2")
 library("NeuralEstimators")
 library("JuliaConnectoR")
-# Start Julia with the project of the current directory:
-Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=. --threads=auto")
+## Start Julia with the project of the current directory:
+Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
 
 # Two possible models:
 # homogeneous:    Z | θ ~ N(θ, s^2), θ ~ U(0, 1), s known 
 # heterogeneous:  Z | θ ~ N(θ, θ^2), θ ~ U(0, 1)
-heterogeneous <- T
+heterogeneous <- TRUE
 
 a <- 0
 b <- 1
@@ -74,9 +74,10 @@ g2 <- ggplot(df_grid) +
 
 # ---- Neural likelihood-to-evidence ratio ----
 
+
+## Initialise the likelihood-to-evidence-ratio estimator
 estimator <- juliaEval('
-  using NeuralEstimators
-  using Flux
+  using NeuralEstimators, Flux
 
   d = 1    # dimension of each replicate
   p = 1    # number of parameters in the statistical model
@@ -98,7 +99,7 @@ estimator <- juliaEval('
   	Dense(w, 1)
   	)
   deepset = DeepSet(summary_network, inference_network)
-  r̂ = RatioEstimator(deepset)
+  RatioEstimator(deepset)
 ')
 
 K <- 100000
@@ -107,27 +108,25 @@ theta_val   <- prior(K/10)
 Z_train     <- simulate(theta_train)
 Z_val       <- simulate(theta_val)
 
-# Coerce data to required format
+## Coerce data and parameters to format required by NeuralEstimators
 Z_train <- lapply(Z_train, as.matrix)
 Z_val <- lapply(Z_val, as.matrix)
-
-
 theta_train <- matrix(theta_train, nrow = 1)
 theta_val <- matrix(theta_val, nrow = 1)
-# estimator <- train(estimator,
-#   theta_train = theta_train,
-#   theta_val   = theta_val,
-#   Z_train = Z_train,
-#   Z_val   = Z_val
-# )
-estimator <- juliaLet('
-  train(r̂, theta_train, theta_val, Z_train, Z_val)
-', theta_train = theta_train, theta_val = theta_val, Z_train = Z_train, Z_val = Z_val)
 
-# Apply the estimator to the test data
+## Train the estimator
+estimator <- train(estimator,
+  theta_train = theta_train,
+  theta_val   = theta_val,
+  Z_train = Z_train,
+  Z_val   = Z_val
+)
+
+## Apply the estimator to the test data
 Z <- lapply(df_grid$z, as.matrix)
 theta <- matrix(df_grid$theta, nrow = 1)
-chat <- juliaLet('r̂(Z, theta; classifier = true) ', Z = Z, theta = theta)
+rhat <- estimate(estimator, Z, theta)
+chat <- rhat/(1+rhat)
 df_grid$chat <- as.numeric(chat)
 
 g3 <- ggplot(df_grid) + 
