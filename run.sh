@@ -56,8 +56,8 @@ Rscript src/9a_Plot_Synth_Lik.R
 Rscript src/9b_Plot_Scatter_plots.R
 Rscript src/9c_Plot_Micro_Results.R
 Rscript src/9d_Table_Results_Summary.R
-Rscript src/10a_Plot_Micro_Results_MSP.R
-Rscript src/10b_Plot_Scatter_plots_MSP.R
+Rscript src/9e_Plot_Micro_Results_MSP.R
+Rscript src/9f_Plot_Scatter_plots_MSP.R
 
 echo ""
 echo "######## Everything finished! ############"
