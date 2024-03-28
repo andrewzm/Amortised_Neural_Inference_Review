@@ -30,9 +30,9 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 
 ## Methods that sample from the posterior
 preds <- list()
-method_names <- list(BayesFlow = "NF-NMP", NRE = "NRE")
+method_names <- list(BayesFlow = "NF-NMP")   #, NRE = "NRE")
 
-for(method in c("BayesFlow", "NRE")) {
+for(method in c("BayesFlow"))  {    #, "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_MSP_micro_test.rds"))
 }
 
