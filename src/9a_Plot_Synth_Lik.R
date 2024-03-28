@@ -48,7 +48,7 @@ summ_test$method <- factor(summ_test$method,
 
 p <- ggplot(summ_data) +
     geom_point(data = summ_test, aes(l, s), col = "red", size = 0.2) +
-    facet_wrap(~method, scales = "free", ncol = 2) +
+    facet_wrap(~method, scales = "free", nrow = 2) +
     xlab(expression(theta)) +
     ylab(expression(S(bold(Z)))) +
     xlim(-0.1, 0.7) +
@@ -64,4 +64,4 @@ p <- ggplot(summ_data) +
     theme(plot.tag = element_text(face = "bold", size = 10),
           plot.tag.position = c(0.02, 0.98))
 
-ggsave(paste0("fig/synth_liks.png"), p, width = 3.6, height = 2.4)
+ggsave(paste0("fig/synth_liks.pdf"), p, width = 2.6, height = 3.3)

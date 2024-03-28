@@ -25,7 +25,7 @@ set.seed(1)
 ## Set up parameters
 ngrid <- 16L                        # Number of grid points in each dimension  
 ngrid_squared <- as.integer(16^2)   # Number of grid points squared
-images_to_process <- "micro_test"         # or "micro_test"
+images_to_process <- "micro_test"         # "test" or "micro_test"
 
 ## Set up spatial grid on [0, 1] x [0, 1]
 s1 <- s2 <- seq(0, 1, length.out = ngrid)

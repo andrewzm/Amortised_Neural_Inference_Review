@@ -35,7 +35,7 @@ for(method in c("Metropolis_Hastings", "BayesFlow", "VB",
                 "VB_Synthetic_Naive",
                 "VB_Synthetic_MutualInf", "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_test.rds"))
-   preds[[method]] <- preds[[method]][1:1000, ] # Only keep 1000 test points
+   preds[[method]] <- drop(preds[[method]])[1:1000, ] # Only keep 1000 test points
 }
 
 point_summaries <- lapply(preds,
@@ -80,4 +80,5 @@ png("fig/scatter_plot_legend.png", width = 1000, height = 400, res = 300) # Adju
 grid.draw(legend)
 dev.off()
 
-ggsave("fig/scatter_plots.png", p + theme(legend.position = "none"), width = 7.2, height = 1.7)
+ggsave("fig/scatter_plots.pdf", p + theme(legend.position = "none"), 
+                                width = 7.2, height = 1.7)

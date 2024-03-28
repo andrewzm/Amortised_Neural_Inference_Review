@@ -172,15 +172,6 @@ if(file.exists("./ckpts/NVI_Synth_Naive/checkpoint_epoch_10.hdf5")) {
                   batch_size = 512L,
                   callbacks = list(checkpoint_callback))
 
-    # vae_synth %>% compile(optimizer =
-    #                     optimizer_adam(
-    #                         learning_rate = 0.001),)
-
-    # vae_synth %>% fit(train_images,
-    #             epochs = 5L,
-    #             shuffle = TRUE,
-    #             batch_size = 2048,
-    #             callbacks = list(checkpoint_callback))
 }
 
 
@@ -206,22 +197,3 @@ VB_samples_micro <- rnorm(n = 500 * dim(test_micro_images)[1],
 saveRDS(VB_samples, "output/VB_Synthetic_Naive_test.rds")
 saveRDS(VB_samples_micro, "output/VB_Synthetic_Naive_micro_test.rds")
 
-
-# p <- ggplot(df_for_plot) +
-#       geom_point(data = data.frame(l = as.numeric(test_lscales),
-#                                     s = as.numeric(test_summ_stat)),
-#                                   aes(l, s), col = "red", size = 0.2) +
-#       xlab("length scale") + ylab("summary statistic") +
-#                           xlim(-0.1, 0.7) +
-#       theme_bw() +
-#       theme(text = element_text(size = 7),
-#               legend.title = element_blank())
-
-#   ggsave("fig/summ_stats.png", p, width = 8, height = 4)
-
-#   p <- p + geom_line(aes(l, mu), col = "black") +
-#         geom_line(aes(l, mu + 1.95*sd), col = "blue", linetype = "dashed") +
-#         geom_line(aes(l, mu - 1.95*sd), col = "blue", linetype = "dashed")
-
-
-#   ggsave("fig/synth_lik.png", p, width = 8, height = 4)
