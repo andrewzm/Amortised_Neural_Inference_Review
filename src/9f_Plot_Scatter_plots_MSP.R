@@ -41,7 +41,7 @@ point_summaries <- lapply(seq_along(preds),
                           }) %>%
                    Reduce("cbind", .)
 
-## Add point summaries from Neural Bayes estimator
+## Add point summaries from point estimator
 CompLik_raw <- readRDS("output/CompLik_MSP_test.rds") %>% as.vector()
 CompLik <- data.frame(Est = CompLik_raw,
                       Truth = c(test_params[,1], test_params[,2]),
