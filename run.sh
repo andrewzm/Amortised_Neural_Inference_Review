@@ -1,8 +1,6 @@
 #!/bin/bash
 unset R_HOME
 
-#TODO add a quick option
-
 set -e
 
 echo ""
@@ -47,7 +45,6 @@ do
     echo "##### Starting experiments for $statmodel model #####"
     echo ""
     Rscript src/3_fKL.R --statmodel=$statmodel
-    #Rscript src/7_NBE.R --statmodel=$statmodel
     Rscript src/8_NRE.R --statmodel=$statmodel
 done
 

@@ -12,7 +12,7 @@ p <- settings$num_params
 use_gpu <- FALSE
 
 juliaEval("
-	using NeuralEstimators, Flux, CSV, DataFrames, RData, Tables
+	using NeuralEstimators, Flux, CSV, DataFrames, Tables
 	using BSON: @save, @load
 	")
 
@@ -48,20 +48,16 @@ estimators <- juliaLet('
 	train_params = Float32.(train_params)
 	val_params   = Float32.(val_params)
 
-	θ̂  = PointEstimator(deepcopy(architecture))
-	θ̂₂ = PointEstimator(deepcopy(architecture))
-	θ̂₃ = IntervalEstimator(deepcopy(architecture); probs = [0.05, 0.95])
+	θ̂  = PointEstimator(architecture)
+	θ̂₂ = IntervalEstimator(architecture; probs = [0.05, 0.95])
 
 	@info "Training neural Bayes estimator: posterior mean"
 	θ̂ = train(θ̂, train_params, val_params, train_images, val_images, loss = Flux.mse)
 
-	@info "Training neural Bayes estimator: posterior median"
+	@info "Training neural Bayes estimator: posterior quantiles"
 	θ̂₂ = train(θ̂₂, train_params, val_params, train_images, val_images)
 
-	@info "Training neural Bayes estimator: marginal posterior quantiles"
-	θ̂₃ = train(θ̂₃, train_params, val_params, train_images, val_images)
-
-	θ̂, θ̂₂, θ̂₃
+	θ̂, θ̂₂,
 	',
     architecture = architecture, statmodel = statmodel,
     train_images = train_images, train_params = train_params,
@@ -77,24 +73,25 @@ test_images <- test_images[1:1000]
 
 compute_estimates <- function(estimators, images) {
     df <- juliaLet('
-  θ̂, θ̂₂, θ̂₃ = estimators
+  θ̂, θ̂₂ = estimators
   ts = TruncateSupport(a, b)
   Z = broadcast.(Float32, Z)
 
   # We can apply the estimators simply as θ̂(images), but here we use the
   # function estimateinbatches() to prevent the possibility of memory issues
   mean_estimates = estimateinbatches(Chain(θ̂, ts), Z, use_gpu=use_gpu)
-  median_estimates = estimateinbatches(Chain(θ̂₂, ts), Z, use_gpu=use_gpu)
-  quantile_estimates = estimateinbatches(Chain(θ̂₃, ts), Z, use_gpu=use_gpu)
+  quantile_estimates = estimateinbatches(Chain(θ̂₂, ts), Z, use_gpu=use_gpu)
 
   # Store as dataframe
-  estimates = permutedims(vcat(mean_estimates, median_estimates, quantile_estimates))
-  estimates = DataFrame(estimates, ["estimate", "median", "lower", "upper"]) # TODO this needs to change when p > 1
+  estimates = permutedims(vcat(mean_estimates, quantile_estimates))
+  estimates = DataFrame(estimates, ["estimate", "lower", "upper"]) # TODO this needs to change when p > 1
   estimates[:, :Method] .= "NBE" # save the method for plotting
   estimates
 	',
-        estimators = estimators, Z = images,
-        a = settings$support_min, b = settings$support,
+        estimators = estimators, 
+        Z = images,
+        a = settings$support_min, 
+        b = settings$support,
         use_gpu = use_gpu
     )
     as.data.frame(df)
