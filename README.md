@@ -1,4 +1,4 @@
-# Source code for "Neural Methods for Amortised Statistical Inference" (Under Construction)
+# Source code for "Neural Methods for Amortised Statistical Inference"
 
 ![Figure 2: Illustration of amortised likelihood-to-evidence ratio estimation](/fig/Bayes_classifier.png?raw=true)
 
@@ -16,27 +16,13 @@ Note that each of these packages can be interfaced from R using [reticulate](htt
 
 ### Software dependencies
 
-We suggest that users set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. To create a conda environment, run the following command in terminal (note, we are not installing GPU libraries as these are not needed for this code):
-
-```
-conda create -n ARSIA -c conda-forge julia=1.9.4 r-base nlopt bayesflow
-```
-
-Then activate the conda environment with:
-
-```
-conda activate ARSIA
-```
-
-Once this is done, you will need to point the R scripts to the correct conda environment so it uses the correct Python environment -- simply change the argument to the `use_condaenv()` function in `src/1_Generate_GP_Data.R`, `src/3_fKL.R`, `4_rKL.R`, `5_rKL_Synthetic_Naive.R`, and `6_rKL_Synthetic_MutualInf.R` to the path of your conda environment.
-
-If you do not wish to use a conda environment, you will need to install Python, Julia, R and the associated packages manually if they are not already on your system:  
+We suggest that users set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. In your environment, install `Python`, `R`, and `Julia`. If you do not wish to use a conda environment, then install the software directly from the following websites:
 
 - Install [Julia 1.9.4](https://julialang.org/downloads/).
 - Install [R >= 4.0.0](https://www.r-project.org/).
 - Install [Python >= 3.10.0](https://www.python.org/).
 
-Once Julia and R are setup, install the Julia and R package dependencies by running the following commands from the top-level of the repository:
+Once `Julia`, `Python` and `R` are setup, install the `Julia` and `R` package dependencies by running the following commands from the top-level of the repository:
 
 ```
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
@@ -44,6 +30,10 @@ julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 ```
 Rscript dependencies_install.R
 ```
+
+You will also need to install `BayesFlow` and associated `TensorFlow` packages; please visit the above `BayesFlow` website for details. Many of the `R` scripts call `Python`. You will likely need to modify the `R` scripts so that the `reticulate` call points to the correct `Python` environment -- please look at the `use_condaenv()` function in `src/1_Generate_GP_Data.R`, `src/3_fKL.R`, `src/4_rKL.R`, `src/5_rKL_Synthetic_Naive.R`, and `src/6_rKL_Synthetic_MutualInf.R` and either remove this line if you use system-level `Python` or change the argument to point to your conda environment.
+
+
 
 ### Hardware requirements
 
