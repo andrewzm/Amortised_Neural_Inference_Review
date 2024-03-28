@@ -21,7 +21,7 @@ First, download this repository and navigate to its top-level directory within t
 ### Software dependencies
 
 *TODO* Any specific instructions for getting reticulate set up properly? 
-*TODO* Better way of saving and installing R package dependencies? 
+*TODO* Better way of saving and installing R package dependencies, like I do with the Julia packages? 
 
 Before installing the software dependencies, users may wish to set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. To create a conda environment, run the following command in terminal:
 
@@ -40,7 +40,9 @@ The above conda environment installs Julia and R automatically. If you do not wi
 - Install [Julia 1.9.4](https://julialang.org/downloads/).
 - Install [R >= 4.0.0](https://www.r-project.org/).
 
-Once Julia and R are setup, install the Julia and R package dependencies (given in `Project.toml` and `Manifest.toml`, and `dependencies.txt`, respectively) by running the following commands from the top-level of the repository:
+
+
+Once Julia and R are setup, install the Julia and R package dependencies (given in `Project.toml` and `Manifest.toml`, and `dependencies.txt`, respectively) by running the following commands from the top-level of the repository: *TODO* dependencies.txt is not currently in the repo: how do we want to document and install the R package dependencies? 
 
 ```
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'

@@ -19,6 +19,9 @@ library("dplyr")
 })
 library("optparse")
 
+# Start Julia with the project of the current directory:
+Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
+
 option_list <- list(
   make_option("--statmodel", type="character", default="GP", metavar="character")
 )

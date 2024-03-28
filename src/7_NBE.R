@@ -11,20 +11,23 @@ p <- settings$num_params
 # the following flag to FALSE.
 use_gpu <- FALSE
 
-# Start Julia with the project of the current directory:
-Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
-
 juliaEval("
-	using NeuralEstimators
+	using NeuralEstimators, Flux, CSV, DataFrames, RData, Tables
 	using BSON: @save, @load
-	using CSV
-	using DataFrames
-	using Flux
-	using RData
-	using Tables
 	")
 
 # ---- Training ----
+
+vectorise <- function(a) lapply(seq(dim(a)[4]), function(i) a[, , , i, drop = F])
+train_images <- readRDS(settings$fname_train_data) %>% aperm(c(2, 3, 4, 1)) %>% vectorise
+val_images   <- readRDS(settings$fname_val_data) %>% aperm(c(2, 3, 4, 1)) %>% vectorise
+train_params <- readRDS(settings$fname_train_params) %>% drop %>% as.matrix %>% t
+val_params   <- readRDS(settings$fname_val_params) %>% drop %>% as.matrix %>% t
+
+# train_images <- train_images[1:1000]
+# val_images <- val_images[1:1000]
+# train_params <- train_params[, 1:1000, drop = F]
+# val_params <- val_params[, 1:1000, drop = F]
 
 architecture <- juliaLet("
 	summary_network = Chain(
@@ -39,12 +42,6 @@ architecture <- juliaLet("
 	DeepSet(summary_network, inference_network)
 	", p = p)
 
-vectorise <- function(a) lapply(seq(dim(a)[4]), function(i) a[, , , i, drop = F])
-train_images <- readRDS(settings$fname_train_data) %>% aperm(c(2, 3, 4, 1)) %>% vectorise
-val_images <- readRDS(settings$fname_val_data) %>% aperm(c(2, 3, 4, 1)) %>% vectorise
-train_params <- readRDS(settings$fname_train_params) %>% drop %>% as.matrix %>% t
-val_params <- readRDS(settings$fname_val_params) %>% drop %>% as.matrix %>% t
-
 estimators <- juliaLet('
 	train_images = broadcast.(Float32, train_images)
 	val_images   = broadcast.(Float32, val_images)
@@ -54,9 +51,6 @@ estimators <- juliaLet('
 	θ̂  = PointEstimator(deepcopy(architecture))
 	θ̂₂ = PointEstimator(deepcopy(architecture))
 	θ̂₃ = IntervalEstimator(deepcopy(architecture); probs = [0.05, 0.95])
-
-	# Savpath for the trained estimators
-	mkpath("ckpts/NBE")
 
 	@info "Training neural Bayes estimator: posterior mean"
 	θ̂ = train(θ̂, train_params, val_params, train_images, val_images, loss = Flux.mse)

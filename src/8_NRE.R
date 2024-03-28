@@ -11,18 +11,10 @@ p <- settings$num_params
 # the following flag to FALSE.
 use_gpu <- FALSE
 
-# Start Julia with the project of the current directory:
-Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
-
-juliaEval('
-using NeuralEstimators
-using BSON: @save, @load
-using CSV
-using DataFrames
-using Flux
-using RData
-using Tables     
-')
+juliaEval("
+	using NeuralEstimators, Flux, CSV, DataFrames, RData, Tables
+	using BSON: @save, @load
+	")
 
 # ---- Training ----
 
@@ -53,10 +45,6 @@ val_params   <- readRDS(settings$fname_val_params) %>% drop %>% as.matrix %>% t
 # val_params <- val_params[, 1:1000, drop = F]
 
 estimator <- juliaLet('
-# By default, NeuralEstimators will automatically find and utilise a working
-# GPU, if one is available. To use the CPU (even if a GPU is available), set
-# the following flag to false.
-use_gpu = false
 
 train_images = broadcast.(Float32, train_images)
 val_images   = broadcast.(Float32, val_images)
@@ -66,17 +54,10 @@ val_params   = Float32.(val_params)
 @info "Training neural ratio estimator..."
 estimator = train(estimator, train_params, val_params, train_images, val_images, use_gpu=use_gpu)
 
-# Save the trained estimator
-mkpath("ckpts/NRE")
-estimator_state = Flux.state(estimator)
-@save "ckpts/NRE/trained_estimators_$(statmodel).bson" estimator_state
-
-# Load the saved estimator
-#@load "ckpts/NRE/trained_estimators_$(statmodel).bson" estimator_state
-#Flux.loadmodel!(estimator, estimator_state)
-
 estimator
-', estimator = estimator, statmodel = statmodel, train_images = train_images, train_params = train_params, val_images = val_images, val_params = val_params)
+', estimator = estimator, statmodel = statmodel, train_images = train_images, 
+  train_params = train_params, val_images = val_images, val_params = val_params, 
+  use_gpu = use_gpu)
 
 
 # ---- Testing ----
