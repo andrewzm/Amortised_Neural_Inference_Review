@@ -95,8 +95,7 @@ compute_estimates <- function(estimators, images) {
 
   # Store as dataframe
   estimates = permutedims(vcat(mean_estimates, median_estimates, quantile_estimates))
-  estimates_names = repeat(["estimate", "median", "lower", "upper"], inner = p)
-  estimates = DataFrame(estimates, estimates_names) # TODO
+  estimates = DataFrame(estimates, ["estimate", "median", "lower", "upper"]) # TODO this needs to change when p > 1
   estimates[:, :Method] .= "NBE" # save the method for plotting
   estimates
 	',
