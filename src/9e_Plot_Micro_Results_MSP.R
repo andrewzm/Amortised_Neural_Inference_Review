@@ -39,7 +39,7 @@ for(method in c("BayesFlow", "NRE")) {
 preds %>% names
 
 ## Point summaries from Neural Bayes estimator
-##NBE <- read.csv("output/NBE_micro_test.csv")
+##NBE <- readRDS("output/NBE_micro_test.rds")
 
 ## CompLik
 CompLikEst <- readRDS("output/CompLik_MSP_micro_test.rds") %>%

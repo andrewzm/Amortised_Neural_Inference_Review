@@ -48,7 +48,7 @@ for(method in c( "Metropolis_Hastings", "BayesFlow",
 }
 
 ## Point summaries from Neural Bayes estimator
-NBE <- read.csv("output/NBE_micro_test.csv")
+NBE <- readRDS("output/NBE_micro_test.rds")
 
 zdf <- sgrid
 samples_all <- NULL

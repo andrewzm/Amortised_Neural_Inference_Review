@@ -97,7 +97,7 @@ all_results$Method <- factor(all_results$Method,
                              levels = unique(all_results$Method))
 
 
-NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate, Lower = lower, Upper = upper)
+NBE <- readRDS("output/NBE_test.rds") %>% rename(Est = estimate, Lower = lower, Upper = upper)
 NBE <- NBE[1:1000, ]
 all_results <- bind_rows(all_results, NBE)
 

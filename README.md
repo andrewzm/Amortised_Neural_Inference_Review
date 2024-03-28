@@ -48,3 +48,7 @@ The repository is organised into folders containing source code (`src`), interme
 The replication script is `run.sh`, invoked using `bash run.sh` from the top level of this repository. The replication script will automatically train the neural networks, generate estimates/samples from both the neural and likelihood-based estimators/samplers, and populate the `fig` folder with the figures and results of the manuscript.
 
 Note that the nature of our experiments means that the run time for reproducing the results of the manuscript can be moderate (on the order of several hours). 
+
+#### Minor reproducibility difficulties
+
+When training neural networks, there is often unavoidable non-determinism: see, for example, [here](https://discourse.julialang.org/t/flux-reproducibility-of-gpu-experiments/62092). In our reproducible code, this does not significantly affect the "story" of the final results in the sense that each method performs similarly well in each run, but there may be some slight numerical differences each time the code is executed.
