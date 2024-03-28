@@ -1,4 +1,4 @@
-# Source code for "Neural Methods for Amortised Statistical Inference"
+# Source code for "Neural Methods for Amortised Statistical Inference" (Under Construction)
 
 ![Figure 2: Illustration of amortised likelihood-to-evidence ratio estimation](/fig/Bayes_classifier.png?raw=true)
 
