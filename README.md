@@ -16,7 +16,13 @@ Note that each of these packages can be interfaced from R using [reticulate](htt
 
 ### Software dependencies
 
-We suggest that users set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. In your environment, install `Python`, `R`, and `Julia`. If you do not wish to use a conda environment, then install the software directly from the following websites:
+We suggest that users set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. In your environment, install `Python`, `R`, and `Julia`. An environment instruction that worked in our case was the following:
+
+```
+conda create -n ARSIA -c conda-forge julia=1.9.4 r-base nlopt python tensorflow
+```
+
+If you do not wish to use a conda environment, then install the software directly from the following websites:
 
 - Install [Julia 1.9.4](https://julialang.org/downloads/).
 - Install [R >= 4.0.0](https://www.r-project.org/).
@@ -34,9 +40,14 @@ Rscript dependencies_install.R
 pip install bayesflow
 ```
 
-You will also need to install `BayesFlow` and associated `TensorFlow` packages; please visit the above `BayesFlow` website for details. Many of the `R` scripts call `Python`. You will likely need to modify the `R` scripts so that the `reticulate` call points to the correct `Python` environment -- please look at the `use_condaenv()` function in `src/1_Generate_GP_Data.R`, `src/3_fKL.R`, `src/4_rKL.R`, `src/5_rKL_Synthetic_Naive.R`, and `src/6_rKL_Synthetic_MutualInf.R` and either remove this line if you use system-level `Python` or change the argument to point to your conda environment.
+After installing the `Julia` packages you might need to load `Julia` and run the commands
 
+```
+import Pkg; Pkg.add("cuDNN")
+import Pkg; Pkg.add("Flux")
+```
 
+Many of the `R` scripts call `Python`. Currently many `R` scripts  use `reticulate` and point to the correct `Python` environment through the function `use_condaenv(Sys.getenv("CONDA_PREFIX"))`. This function loads the currently-activated conda environment. If you need to modify this code please do this in `src/1_Generate_GP_Data.R`, `src/3_fKL.R`, `src/4_rKL.R`, `src/5_rKL_Synthetic_Naive.R`, and `src/6_rKL_Synthetic_MutualInf.R`.
 
 ### Hardware requirements
 
