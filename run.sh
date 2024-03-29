@@ -35,7 +35,7 @@ do
     
     Rscript src/7_NBE.R --statmodel=$statmodel
     python src/8_NRE_SBI.py 
-    python src/8_NRE_SBI.R 
+    Rscript src/8_NRE_SBI.R 
 done
 
 for statmodel in MSP

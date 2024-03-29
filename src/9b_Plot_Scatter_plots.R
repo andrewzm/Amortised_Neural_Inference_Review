@@ -45,7 +45,7 @@ point_summaries <- lapply(preds,
                    gather(Method, Est, -lscale_true)
 
 ## Add point summaries from Neural Bayes estimator
-NBE <- read.csv("output/NBE_test.csv") %>% rename(Est = estimate)
+NBE <- readRDS("output/NBE_test.rds") %>% rename(Est = estimate)
 point_summaries <- bind_rows(point_summaries, NBE[1:1000, ])
 
 point_summaries$Method <- c(method_names[point_summaries$Method])

@@ -16,7 +16,9 @@ from sbi.inference import SNRE_A
 
 # Which model are we using? Either the Gaussian process "GP", or inverted
 # max-stable process "MSP"
-model = "MSP"
+# NB We didn't end up using NRE with the MSP, but I leave this code here in case
+# we decide to incorporate all methods in that study later
+model = "GP"
 # for "historical" reasons, path for GP is the default
 if model == "GP":
     model = ""
@@ -98,18 +100,8 @@ def density(posterior, images, theta_grid):
     pdf = pdf.numpy()
     return pdf
 
-#TODO this will have to change!
-# theta_grid = torch.linspace(0, 0.6, steps = 750)
-# theta_grid = torch.linspace(0, 0.6, steps = 750)
-# np.array(np.meshgrid(range(10000), range(10000))).reshape(2, 100000000).T
-# [(x, y) for x in range(5) for y in range(5)]
-#
-# theta = torch.as_tensor([0.1])
-# x = micro_test_images[0]
-# posterior.log_prob(theta, x = x)
-# micro_test_density = density(posterior, micro_test_images, theta_grid)
-
 # Evaluate over test sets
+theta_grid = torch.linspace(0, 0.6, steps = 750)
 micro_test_density = density(posterior, micro_test_images, theta_grid)
 test_density = density(posterior, test_images[0:1000, :, :, :], theta_grid)
 
@@ -133,7 +125,7 @@ save_numpy_as_rds(test_density, f"output/NRE{model}_test_density.rds")
 
 
 
-# ---- unused code ----
+# ---- Unused prototyping code ----
 
 # # Function to MCMC sample from the posterior given a set of images
 # def sample(posterior, images, num_samples = 1000):

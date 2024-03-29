@@ -2,7 +2,7 @@
 
 julia_version = "1.9.4"
 manifest_format = "2.0"
-project_hash = "a18a456934e904c2b604a912e712a52bfb14e9dc"
+project_hash = "8aa0beef22c0659616ece0b51127ac54c9ba3c82"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -626,9 +626,9 @@ version = "0.8.4"
 
 [[deps.Flux]]
 deps = ["Adapt", "ChainRulesCore", "Compat", "Functors", "LinearAlgebra", "MLUtils", "MacroTools", "NNlib", "OneHotArrays", "Optimisers", "Preferences", "ProgressLogging", "Random", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "Zygote"]
-git-tree-sha1 = "a5475163b611812d073171583982c42ea48d22b0"
+git-tree-sha1 = "502d0232ec6430d40b6e5b57637333f32192592e"
 uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
-version = "0.14.15"
+version = "0.14.14"
 
     [deps.Flux.extensions]
     FluxAMDGPUExt = "AMDGPU"
@@ -1344,7 +1344,7 @@ version = "1.2.0"
 
 [[deps.NeuralEstimators]]
 deps = ["AlgebraOfGraphics", "BSON", "CSV", "CUDA", "CairoMakie", "ChainRulesCore", "ColorSchemes", "DataFrames", "Distances", "Distributions", "Flux", "Folds", "Functors", "GaussianRandomFields", "GraphNeuralNetworks", "Graphs", "InvertedIndices", "LinearAlgebra", "NamedArrays", "NearestNeighbors", "Parameters", "Random", "RecursiveArrayTools", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "Test", "Zygote", "cuDNN"]
-git-tree-sha1 = "41a42ef4c666954b098d123ff36f41a422b5a3e4"
+git-tree-sha1 = "9ce4eb8a1f76171e8292fd160fc65c83bb451fcf"
 repo-rev = "FluxExplicitTraining"
 repo-url = "https://github.com/msainsburydale/NeuralEstimators.jl"
 uuid = "38f6df31-6b4a-4144-b2af-7ace2da57606"

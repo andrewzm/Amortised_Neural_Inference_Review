@@ -48,7 +48,9 @@ for(method in c( "Metropolis_Hastings", "BayesFlow",
 }
 
 ## Point summaries from Neural Bayes estimator
-NBE <- read.csv("output/NBE_micro_test.csv")
+NBE <- readRDS("output/NBE_micro_test.rds")
+NBE <- NBE %>% rename(l = estimate)
+NBE$lscale_true <- round(NBE$lscale_true, 4)
 
 zdf <- sgrid
 samples_all <- NULL
@@ -69,6 +71,13 @@ zdf$simnum <- strsplit(zdf$sim, "Z") %>% sapply(function(x) as.numeric(x[2]))
 samples_all$Method <- c(method_names[samples_all$Method])
 samples_all$Method <- factor(samples_all$Method,
                                  levels = sort(unlist(method_names)))
+
+MCMC_mean <- samples_all %>% 
+  filter(Method == "MCMC") %>% 
+  group_by(lscale_true) %>% 
+  summarise(l = mean(l), Method = unique(Method))
+
+point_estimates <- bind_rows(NBE, MCMC_mean)
 
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
@@ -97,9 +106,9 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
 LL <- data.frame(lscale_true = rep(3,3))
 density_plots <- ggplot(samples_all) +
            geom_density(aes(x = l, colour = Method), alpha = 1, linewidth = 0.2) +
-           geom_vline(data = NBE, aes(xintercept = estimate, colour = Method)) +
-           facet_wrap(~lscale_true, scales = "free_y",
-                      labeller = label_bquote(theta[true] == .(lscale_true))) +
+           #geom_vline(data = NBE, aes(xintercept = l, colour = Method)) +
+           geom_vline(data = point_estimates, aes(xintercept = l, colour = Method)) +
+           facet_wrap(~lscale_true, scales = "free_y", labeller = label_bquote(theta[true] == .(lscale_true))) +
            geom_vline(aes(xintercept = lscale_true),
                      linetype = "dashed", col = "black") +
            xlab(expression(theta)) +
