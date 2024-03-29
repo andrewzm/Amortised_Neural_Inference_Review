@@ -4,5 +4,7 @@ authors = ["Matthew Sainsbury-Dale <msdale@uow.edu.au>"]
 version = "0.1.0"
 
 [deps]
-Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 NeuralEstimators = "38f6df31-6b4a-4144-b2af-7ace2da57606"
+cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"

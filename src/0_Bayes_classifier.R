@@ -1,6 +1,7 @@
 library("ggplot2")
 library("NeuralEstimators")
 library("JuliaConnectoR")
+library("dplyr")
 ## Start Julia with the project of the current directory:
 Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
 
@@ -74,10 +75,11 @@ g2 <- ggplot(df_grid) +
 
 # ---- Neural likelihood-to-evidence ratio ----
 
-
-## Initialise the likelihood-to-evidence-ratio estimator
-estimator <- juliaEval('
-  using NeuralEstimators, Flux
+## Initialise the likelihood-to-evidence-ratio estimator, here using Julia code
+## for added flexibility over the R helper function ?initialise_estimator
+init_est <- function() {
+  juliaEval('
+  using NeuralEstimators, Flux, CUDA, cuDNN
 
   d = 1    # dimension of each replicate
   p = 1    # number of parameters in the statistical model
@@ -101,6 +103,8 @@ estimator <- juliaEval('
   deepset = DeepSet(summary_network, inference_network)
   RatioEstimator(deepset)
 ')
+}
+estimator <- init_est()
 
 K <- 100000
 theta_train <- prior(K) 
@@ -142,3 +146,54 @@ g3 <- ggplot(df_grid) +
 figure <- egg::ggarrange(g1, g2, g3, nrow = 1)
 ggsave("fig/Bayes_classifier.pdf", figure, width = 8.5, height = 3.5, device = "pdf")
 
+
+# ---- Visualising the training procedure ----
+
+cat("Visualising the neural Bayes classifier as a function of the training epoch... \n")
+
+## initialise estimator as before
+estimator <- init_est()
+
+dfs <- list()
+for (epoch in 0:9) {
+  
+  if (epoch > 0) {
+    ## Train the estimator for one epoch
+    estimator <- train(
+      estimator, 
+      theta_train = theta_train, theta_val = theta_val, 
+      Z_train = Z_train, Z_val = Z_val, 
+      epochs = 1
+    )
+  }
+  
+  ## Compute the current class probabilties
+  rhat <- estimate(estimator, Z, theta)
+  chat <- rhat/(1+rhat)
+  chat <- as.numeric(chat)
+
+  ## Store information in data frame
+  df <- df_grid
+  df$chat <- chat
+  df$epoch <- epoch
+  dfs <- c(dfs, list(df))
+}
+df <- bind_rows(dfs)
+
+g4 <- ggplot(df) + 
+  geom_raster(aes(x = theta, y = z, fill = chat)) + 
+  facet_wrap(epoch~., nrow = 2, labeller = label_bquote("epoch" == .(epoch))) + 
+  scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', limits = c(0, 1),
+                       midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill') +
+  scale_x_continuous(expand = c(0, 0), breaks = c(0.25, 0.5, 0.75)) + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  labs(fill = "", x = expression(theta), y = "Z") + 
+  theme_bw() 
+
+ggsave("fig/Bayes_classifier_vs_epoch.pdf", g4, width = 8.5, height = 3.5, device = "pdf")
+
+
+## TODO 
+## The problem is that our training set is so large that after a single epoch 
+## the classifier is essentially fully trained. Need to split the training set
+## and show how the classifier changes within a single epoch.

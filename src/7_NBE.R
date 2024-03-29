@@ -21,34 +21,25 @@ val_params   <- readRDS(settings$fname_val_params) %>% drop %>% as.matrix %>% t
 # train_params <- train_params[, 1:K, drop = F]
 # val_params <- val_params[, 1:K, drop = F]
 
-# summary_network = Chain(
-#   Conv((5, 5), 1 => 6, relu),
-#   Conv((5, 5), 6 => 12, relu),
-#   Flux.flatten
-# )
-# inference_network = Chain(
-#   Dense(768, 50, relu),
-#   Dense(50, p)
-# )
-
 architecture <- juliaLet("
-  using NeuralEstimators, Flux 
+  using NeuralEstimators, Flux, CUDA, cuDNN
 	
   dgrid = 16 # dimension of one side of grid
-  channels = [32, 64]
+  channels = [64, 128]
   summary_network = Chain(
-  	Conv((3, 3), 1 => channels[1], relu, pad = SamePad()),
+  	Conv((3, 3), 1 => channels[1], relu),
   	MaxPool((2, 2)),
-  	Conv((3, 3),  channels[1] => channels[2], relu, pad = SamePad()),
+  	Conv((3, 3),  channels[1] => channels[2], relu),
   	MaxPool((2, 2)),
-  	Flux.flatten
+  	Flux.flatten, 
+  	Dense(512, 10, relu), 
+  	Dense(10, 10, relu), 
   	)
   	
   inference_network = Chain(
-    Dropout(0.1),
-    Dense(dgrid * channels[end], 64, relu),
-    Dropout(0.1),
-    Dense(64, p)
+   	Dense(10, 10, relu),
+    Dense(10, 10, relu),
+    Dense(10, p)
     )
 
 	DeepSet(summary_network, inference_network)
@@ -63,6 +54,7 @@ cat("Training neural Bayes estimator: posterior mean\n")
 estimator1 <- train(estimator1, 
                     theta_train = train_params, theta_val = val_params, 
                     Z_train = train_images, Z_val = val_images, 
+                    loss = "squared-error", 
                     savepath = paste0(settings$ckpt_path, "mean"))
 
 cat("Training neural Bayes estimator: posterior quantiles\n")

@@ -12,7 +12,7 @@ p <- settings$num_params
 use_gpu <- FALSE
 
 juliaEval("
-	using NeuralEstimators, Flux, CSV, DataFrames, RData, Tables
+	using NeuralEstimators, Flux, CSV, DataFrames, RData, Tables, CUDA, cuDNN
 	using BSON: @save, @load
 	")
 

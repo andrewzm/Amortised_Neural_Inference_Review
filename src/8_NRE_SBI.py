@@ -16,6 +16,8 @@ from sbi.inference import SNRE_A
 
 # Which model are we using? Either the Gaussian process "GP", or inverted
 # max-stable process "MSP"
+# NB We didn't end up using NRE with the MSP, but I leave this code here in case
+# we decide to incorporate all methods in that study later
 model = "GP"
 # for "historical" reasons, path for GP is the default
 if model == "GP":
@@ -123,7 +125,7 @@ save_numpy_as_rds(test_density, f"output/NRE{model}_test_density.rds")
 
 
 
-# ---- unused code ----
+# ---- Unused prototyping code ----
 
 # # Function to MCMC sample from the posterior given a set of images
 # def sample(posterior, images, num_samples = 1000):
