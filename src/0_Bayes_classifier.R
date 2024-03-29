@@ -123,13 +123,14 @@ estimator <- train(estimator,
   theta_train = theta_train,
   theta_val   = theta_val,
   Z_train = Z_train,
-  Z_val   = Z_val
+  Z_val   = Z_val, 
+  use_gpu = FALSE
 )
 
 ## Apply the estimator to the test data
 Z <- lapply(df_grid$z, as.matrix)
 theta <- matrix(df_grid$theta, nrow = 1)
-rhat <- estimate(estimator, Z, theta)
+rhat <- estimate(estimator, Z, theta, use_gpu = FALSE)
 chat <- rhat/(1+rhat)
 df_grid$chat <- as.numeric(chat)
 
@@ -163,12 +164,13 @@ for (epoch in 0:9) {
       estimator, 
       theta_train = theta_train, theta_val = theta_val, 
       Z_train = Z_train, Z_val = Z_val, 
-      epochs = 1
+      epochs = 1, 
+      use_gpu = FALSE
     )
   }
   
   ## Compute the current class probabilties
-  rhat <- estimate(estimator, Z, theta)
+  rhat <- estimate(estimator, Z, theta, use_gpu = FALSE)
   chat <- rhat/(1+rhat)
   chat <- as.numeric(chat)
 
@@ -197,3 +199,6 @@ ggsave("fig/Bayes_classifier_vs_epoch.pdf", g4, width = 8.5, height = 3.5, devic
 ## The problem is that our training set is so large that after a single epoch 
 ## the classifier is essentially fully trained. Need to split the training set
 ## and show how the classifier changes within a single epoch.
+
+
+

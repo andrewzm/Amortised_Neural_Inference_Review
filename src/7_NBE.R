@@ -55,13 +55,15 @@ estimator1 <- train(estimator1,
                     theta_train = train_params, theta_val = val_params, 
                     Z_train = train_images, Z_val = val_images, 
                     loss = "squared-error", 
-                    savepath = paste0(settings$ckpt_path, "mean"))
+                    savepath = paste0(settings$ckpt_path, "mean"), 
+                    use_gpu = FALSE)
 
 cat("Training neural Bayes estimator: posterior quantiles\n")
 estimator2 <- train(estimator2, 
                     theta_train = train_params, theta_val = val_params, 
                     Z_train = train_images, Z_val = val_images,
-                    savepath = paste0(settings$ckpt_path, "quantiles"))
+                    savepath = paste0(settings$ckpt_path, "quantiles"), 
+                    use_gpu = FALSE)
 
 # ---- Testing ----
 
@@ -71,8 +73,8 @@ test_images <- test_images[1:1000]
 
 compute_estimates <- function(estimator1, estimator2, images) {
   
-  mean_estimates <- estimate(estimator1, images)
-  quantile_estimates <- estimate(estimator2, images)
+  mean_estimates <- estimate(estimator1, images, use_gpu = FALSE)
+  quantile_estimates <- estimate(estimator2, images, use_gpu = FALSE)
   estimates <- t(rbind(mean_estimates, quantile_estimates))
   a <- settings$support_min
   b <- settings$support
