@@ -2,6 +2,7 @@ library("ggplot2")
 library("NeuralEstimators")
 library("JuliaConnectoR")
 library("dplyr")
+library("latex2exp")
 ## Start Julia with the project of the current directory:
 Sys.setenv("JULIACONNECTOR_JULIAOPTS" = "--project=.")
 
@@ -108,7 +109,7 @@ estimator <- init_est()
 
 K <- 100000
 theta_train <- prior(K) 
-theta_val   <- prior(K/10)
+theta_val   <- prior(K)
 Z_train     <- simulate(theta_train)
 Z_val       <- simulate(theta_val)
 
@@ -189,16 +190,77 @@ g4 <- ggplot(df) +
                        midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill') +
   scale_x_continuous(expand = c(0, 0), breaks = c(0.25, 0.5, 0.75)) + 
   scale_y_continuous(expand = c(0, 0)) + 
-  labs(fill = "", x = expression(theta), y = "Z") + 
-  theme_bw() 
+  labs(fill = "", x = expression(theta), y = "Z", title = TeX(r"(Neural classifier $c_{\bf{\gamma}}(\theta, Z)$)")) + 
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) 
 
-ggsave("fig/Bayes_classifier_vs_epoch.pdf", g4, width = 8.5, height = 3.5, device = "pdf")
+g2 <- g2 + 
+  labs(title = TeX(r"(Bayes classifier $c^*(\theta, Z)$)")) + 
+  theme(legend.position = "none") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+figure <- egg::ggarrange(g2, g4, nrow = 1, widths = c(2, 5))
+
+ggsave("fig/Bayes_classifier_vs_epoch.pdf", figure, width = 10.5, height = 3.5, device = "pdf")
 
 
 ## TODO 
-## The problem is that our training set is so large that after a single epoch 
+## The problem is that our training set is so large that after a single epoch
 ## the classifier is essentially fully trained. Need to split the training set
 ## and show how the classifier changes within a single epoch.
 
+n_batches <- 9
+max_index <- 20000 # NB has to be less than K or there will be errors
+indices <- split(1:max_index, cut(seq_along(1:max_index), n_batches, labels = FALSE))
 
+## initialise estimator as before
+estimator <- init_est()
 
+dfs <- list()
+for (epoch in 0:length(indices)) {
+  
+  if (epoch > 0) {
+    
+    idx <- indices[[epoch]]
+    
+    ## Train the estimator for one epoch
+    estimator <- train(
+      estimator, 
+      theta_train = theta_train[, idx, drop=F], theta_val = theta_val[, idx, drop=F], 
+      Z_train = Z_train[idx], Z_val = Z_val[idx], 
+      epochs = 1, 
+      verbose = FALSE,
+      use_gpu = FALSE
+    )
+  }
+  
+  ## Compute the current class probabilties
+  rhat <- estimate(estimator, Z, theta, use_gpu = FALSE)
+  chat <- rhat/(1+rhat)
+  chat <- as.numeric(chat)
+  
+  ## Store information in data frame
+  df <- df_grid
+  df$chat <- chat
+  df$epoch <- epoch
+  dfs <- c(dfs, list(df))
+}
+df <- bind_rows(dfs)
+df$epoch <- df$epoch/n_batches * (max_index / K)
+df$epoch <- round(df$epoch, 3)
+
+g5 <- ggplot(df) + 
+  geom_raster(aes(x = theta, y = z, fill = chat)) + 
+  facet_wrap(epoch~., nrow = 2, labeller = label_bquote("epoch" == .(epoch))) + 
+  scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', limits = c(0, 1),
+                       midpoint = 0.5, guide = 'colourbar', aesthetics = 'fill') +
+  scale_x_continuous(expand = c(0, 0), breaks = c(0.25, 0.5, 0.75)) + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  labs(fill = "", x = expression(theta), y = "Z", title = TeX(r"(Neural classifier $c_{\bf{\gamma}}(\theta, Z)$)")) + 
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+figure <- egg::ggarrange(g2, g5, nrow = 1, widths = c(2, 5))
+
+ggsave("fig/Bayes_classifier_vs_epochII.pdf", figure, width = 10.5, height = 3.5, device = "pdf")
+                  
