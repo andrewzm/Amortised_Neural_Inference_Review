@@ -30,7 +30,6 @@ do
     Rscript src/3_fKL.R --statmodel=$statmodel
     Rscript src/4_rKL.R --statmodel=$statmodel
     
-    Rscript src/4_rKL_MDN.R --statmodel=$statmodel
     Rscript src/5_rKL_Synthetic_Naive.R --statmodel=$statmodel
     Rscript src/6_rKL_Synthetic_MutualInf.R --statmodel=$statmodel
     

@@ -20,7 +20,7 @@ library("dplyr")
 
 ## Load BayesFlow in R Conda -- note, needs to be changed according to your system
 library("reticulate")
-use_condaenv("~/miniconda3/envs/BayesFlow")
+use_condaenv(Sys.getenv("CONDA_PREFIX"))
 library("tensorflow")
 library("keras")
 

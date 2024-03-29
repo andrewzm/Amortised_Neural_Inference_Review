@@ -30,6 +30,9 @@ julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 ```
 Rscript dependencies_install.R
 ```
+```
+pip install bayesflow
+```
 
 You will also need to install `BayesFlow` and associated `TensorFlow` packages; please visit the above `BayesFlow` website for details. Many of the `R` scripts call `Python`. You will likely need to modify the `R` scripts so that the `reticulate` call points to the correct `Python` environment -- please look at the `use_condaenv()` function in `src/1_Generate_GP_Data.R`, `src/3_fKL.R`, `src/4_rKL.R`, `src/5_rKL_Synthetic_Naive.R`, and `src/6_rKL_Synthetic_MutualInf.R` and either remove this line if you use system-level `Python` or change the argument to point to your conda environment.
 

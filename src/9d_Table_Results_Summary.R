@@ -73,7 +73,7 @@ for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE",
                                   drop(preds[[method]]),
                                   summarise = summarise_method)
 }
-results_crps <- data.frame(results_crps) %>% gather(Method, CRPS)
+results_crps <- data.frame(results_crps) %>% gather(Method, MCRPS)
 
 all_results <- lapply(preds,
                           function(x) apply(x, 1, median)) %>%

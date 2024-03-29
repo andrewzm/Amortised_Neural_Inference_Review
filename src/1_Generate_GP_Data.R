@@ -2,7 +2,7 @@
 library(fields)
 library(dplyr)
 library("reticulate")
-use_condaenv("~/miniconda3/envs/BayesFlow")
+use_condaenv(Sys.getenv("CONDA_PREFIX"))
 library(tensorflow)
 tfp <- import("tensorflow_probability")
 

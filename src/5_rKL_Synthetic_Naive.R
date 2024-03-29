@@ -18,7 +18,7 @@ library(fields)
 library(dplyr)
 library(ggplot2)
 library("reticulate")
-use_condaenv("~/miniconda3/envs/BayesFlow")
+use_condaenv(Sys.getenv("CONDA_PREFIX"))
 library(tensorflow)
 library(keras)
 layers <- tf$keras$layers
