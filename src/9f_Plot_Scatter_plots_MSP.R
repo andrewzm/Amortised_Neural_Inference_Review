@@ -54,6 +54,15 @@ point_summaries$Method <- c(method_names[point_summaries$Method])
 point_summaries$Method <- factor(point_summaries$Method,
                                  levels = sort(unlist(method_names)))
 
+
+equal_breaks <- function(n = 4, s = 0.5, ...){
+  function(x){
+    # rescaling
+    d <- s * diff(range(x)) / (1+2*s)
+    round(seq(min(x)+d, max(x)-d, length=n), 2)
+  }
+}
+
 ## Now make facet grid of scatter plots for each method
 ## with identity line
 p <- ggplot(point_summaries) + 
@@ -73,7 +82,9 @@ p <- ggplot(point_summaries) +
               labeller = label_parsed)  +
     labs(tag = "(b)") +
     theme(plot.tag = element_text(face = "bold", size = 10),
-          plot.tag.position = c(0.02, 0.98))
+          plot.tag.position = c(0.02, 0.98)) +
+    scale_x_continuous(breaks=equal_breaks(n=3, s=0.05), expand = c(0.05, 0))
+    
 
 
 # Extract the legend
