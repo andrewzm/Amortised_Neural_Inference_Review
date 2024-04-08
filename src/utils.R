@@ -201,7 +201,7 @@ CNN <- function(nconvs,
   ## Convolutional layers
   encoders <- list()
   for(i in 1:nconvs) {
-    ## First input is the data, subsequent inputs are the outputs of the previous layere
+    ## First input is the data, subsequent inputs are the outputs of the previous layer
     if(i == 1) input <- Z else input <- encoders[[i-1]]
     ## Define the convolutional layers
     encoders[[i]] <- layer_conv_2d(input,

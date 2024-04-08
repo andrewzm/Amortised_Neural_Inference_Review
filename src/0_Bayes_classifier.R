@@ -107,6 +107,7 @@ init_est <- function() {
 }
 estimator <- init_est()
 
+#TODO can now use on-the-fly simulation
 K <- 100000
 theta_train <- prior(K) 
 theta_val   <- prior(K)

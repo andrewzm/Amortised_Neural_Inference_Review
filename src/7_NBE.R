@@ -6,6 +6,14 @@ method <- "NBE"
 settings <- config_setup(statmodel = statmodel, method = method)
 p <- settings$num_params
 
+## By default, NeuralEstimators will automatically find and utilise a working
+## GPU, if one is available. To use the CPU (even if a GPU is available), set
+## the following flag to FALSE.
+use_gpu <- FALSE
+
+## Use a subset of the training data for fast prototyping?
+quick <- FALSE
+
 # ---- Training ----
 
 vectorise <- function(a) lapply(seq(dim(a)[4]), function(i) a[, , , i, drop = F])
@@ -14,41 +22,34 @@ val_images   <- readRDS(settings$fname_val_data) %>% aperm(c(2, 3, 4, 1)) %>% ve
 train_params <- readRDS(settings$fname_train_params) %>% drop %>% as.matrix %>% t
 val_params   <- readRDS(settings$fname_val_params) %>% drop %>% as.matrix %>% t
 
-## Use a subset of the training data for fast testing
-# K <- 10000
-# train_images <- train_images[1:K]
-# val_images <- val_images[1:K]
-# train_params <- train_params[, 1:K, drop = F]
-# val_params <- val_params[, 1:K, drop = F]
+## Optionally use a subset of the training data for fast prototyping
+if (quick) {
+  K <- 10000
+  train_images <- train_images[1:K]
+  val_images <- val_images[1:K]
+  train_params <- train_params[, 1:K, drop = F]
+  val_params <- val_params[, 1:K, drop = F]
+}
 
 architecture <- juliaLet("
   using NeuralEstimators, Flux, CUDA, cuDNN
-	
-  dgrid = 16 # dimension of one side of grid
+  d = 16 # number of grid points in each dimension  
   channels = [64, 128]
   summary_network = Chain(
-  	Conv((3, 3), 1 => channels[1], relu),
+  	Conv((3, 3), 1 => channels[1], relu, pad = SamePad()),
   	MaxPool((2, 2)),
-  	Conv((3, 3),  channels[1] => channels[2], relu),
+  	Conv((3, 3),  channels[1] => channels[2], relu, pad = SamePad()),
   	MaxPool((2, 2)),
-  	Flux.flatten, 
-  	Dense(512, 10, relu), 
-  	Dense(10, 10, relu), 
+  	Flux.flatten
   	)
-  	
-  inference_network = Chain(
-   	Dense(10, 10, relu),
-    Dense(10, 10, relu),
-    Dense(10, p)
-    )
-
+ inference_network = Chain(
+  Dense(d * channels[end], 64, relu),
+  Dense(64, p)
+  )
 	DeepSet(summary_network, inference_network)
 	", p = p)
-
-estimator1 <- juliaLet("PointEstimator(architecture)", 
-                       architecture = architecture)
-estimator2 <- juliaLet("IntervalEstimator(architecture; probs = [0.05, 0.95])", 
-                       architecture = architecture)
+estimator1 <- juliaLet("PointEstimator(architecture)", architecture = architecture)
+estimator2 <- juliaLet("IntervalEstimator(architecture; probs = [0.05, 0.95])", architecture = architecture)
 
 cat("Training neural Bayes estimator: posterior mean\n")
 estimator1 <- train(estimator1, 
@@ -56,14 +57,14 @@ estimator1 <- train(estimator1,
                     Z_train = train_images, Z_val = val_images, 
                     loss = "squared-error", 
                     savepath = paste0(settings$ckpt_path, "mean"), 
-                    use_gpu = FALSE)
+                    use_gpu = use_gpu)
 
-cat("Training neural Bayes estimator: posterior quantiles\n")
+cat("Training neural Bayes estimator: marginal posterior quantiles\n")
 estimator2 <- train(estimator2, 
                     theta_train = train_params, theta_val = val_params, 
                     Z_train = train_images, Z_val = val_images,
                     savepath = paste0(settings$ckpt_path, "quantiles"), 
-                    use_gpu = FALSE)
+                    use_gpu = use_gpu)
 
 # ---- Testing ----
 
@@ -73,8 +74,8 @@ test_images <- test_images[1:1000]
 
 compute_estimates <- function(estimator1, estimator2, images) {
   
-  mean_estimates <- estimate(estimator1, images, use_gpu = FALSE)
-  quantile_estimates <- estimate(estimator2, images, use_gpu = FALSE)
+  mean_estimates <- estimate(estimator1, images, use_gpu = use_gpu)
+  quantile_estimates <- estimate(estimator2, images, use_gpu = use_gpu)
   estimates <- t(rbind(mean_estimates, quantile_estimates))
   a <- settings$support_min
   b <- settings$support
@@ -85,7 +86,6 @@ compute_estimates <- function(estimator1, estimator2, images) {
   
   return(estimates)
 }
-
 estimates_micro_test <- compute_estimates(estimator1, estimator2, micro_test_images)
 estimates_test <- compute_estimates(estimator1, estimator2, test_images)
 
