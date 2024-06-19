@@ -31,18 +31,18 @@ sgrid <- expand.grid(s1 = s1, s2 = s2)
 ## Methods that sample from the posterior
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC",
+                     NBE = "NBE",
                      BayesFlow = "fKL",
                      VB = "rKL1",
-                     #VB_MDN = "rKL2",
                      VB_Synthetic_Naive = "rKL2",
                      VB_Synthetic_MutualInf= "rKL3",
-                     NRE = "NRE",
-                     NBE = "NBE")
+                     NRE = "NRE")
 
 for(method in c( "Metropolis_Hastings", "BayesFlow",
-                "VB", #"VB_MDN",
+                "VB", 
                 "VB_Synthetic_Naive",
-                "VB_Synthetic_MutualInf", "NRE")) {
+                "VB_Synthetic_MutualInf", 
+                "NRE")) {
    preds[[method]]  <- readRDS(paste0("output/", method, "_micro_test.rds"))
 
 }
@@ -70,14 +70,15 @@ zdf$simnum <- strsplit(zdf$sim, "Z") %>% sapply(function(x) as.numeric(x[2]))
 
 samples_all$Method <- c(method_names[samples_all$Method])
 samples_all$Method <- factor(samples_all$Method,
-                                 levels = sort(unlist(method_names)))
+                                 levels = unlist(method_names))
 
 MCMC_mean <- samples_all %>% 
   filter(Method == "MCMC") %>% 
   group_by(lscale_true) %>% 
   summarise(l = mean(l), Method = unique(Method))
-
 point_estimates <- bind_rows(NBE, MCMC_mean)
+point_estimates$Method <- factor(point_estimates$Method,
+                                 levels = unlist(method_names))
 
 spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
       scale_fill_distiller(palette = "Spectral") +
@@ -105,19 +106,26 @@ spatplots <- ggplot(zdf) + geom_tile(aes(s1, s2, fill = val)) +
 
 LL <- data.frame(lscale_true = rep(3,3))
 density_plots <- ggplot(samples_all) +
+           geom_vline(data = point_estimates, aes(xintercept = l, colour = Method), linewidth = 0.2) +
            geom_density(aes(x = l, colour = Method), alpha = 1, linewidth = 0.2) +
-           #geom_vline(data = NBE, aes(xintercept = l, colour = Method)) +
-           geom_vline(data = point_estimates, aes(xintercept = l, colour = Method)) +
            facet_wrap(~lscale_true, scales = "free_y", labeller = label_bquote(theta[true] == .(lscale_true))) +
            geom_vline(aes(xintercept = lscale_true),
-                     linetype = "dashed", col = "black") +
+                     linetype = "dashed", col = "black", linewidth = 0.2) +
            xlab(expression(theta)) +
            ylab("Density") +
            xlim(c(0, 0.6)) +
            theme_bw() +
            theme(text = element_text(size = 10),
                  legend.title = element_blank(),
-                 legend.position = "bottom")
+                 legend.position = "bottom") +
+          scale_color_manual(values = c("MCMC" = "#1f77b4", 
+                                "NBE"  = "#ff7f0e", 
+                                "fKL"  = "#2ca02c", 
+                                "rKL1" = "#d62728", 
+                                "rKL2" = "#9467bd", 
+                                "rKL3" = "#8c564b", 
+                                "NRE"  = "#e377c2"),
+                               breaks = levels(samples_all$Method))
 
 # Extract the legend
 g <- ggplotGrob(density_plots)

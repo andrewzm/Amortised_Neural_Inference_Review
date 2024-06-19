@@ -27,13 +27,12 @@ test_images <- readRDS("data/test_images.rds")[1:1000,,,]
 summarise_method <- median
 
 method_names <- list(Metropolis_Hastings= "MCMC",
+                     NBE = "NBE",
                      BayesFlow = "fKL",
                      VB = "rKL1",
-                     #VB_MDN = "TMDN-NVI",
                      VB_Synthetic_Naive = "rKL2",
                      VB_Synthetic_MutualInf= "rKL3",
-                     NRE = "NRE",
-                     NBE = "NBE")
+                     NRE = "NRE")
 
 rmspe <- function(truth, est, summarise = mean) {
   sqrt(summarise((est - truth)^2))
@@ -66,8 +65,7 @@ crps <- function(z, samples, summarise = mean) {
 preds <- results_crps <- NULL
 
 for(method in c("Metropolis_Hastings",  "BayesFlow", "NRE", 
-                "VB", #"VB_MDN", 
-                "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
+                "VB", "VB_Synthetic_MutualInf", "VB_Synthetic_Naive")) {
    preds[[method]]  <- drop(readRDS(paste0("output/", method, "_test.rds")))[1:1000, ]
    results_crps[[method]] <- crps(drop(test_lscales),
                                   drop(preds[[method]]),
@@ -103,7 +101,7 @@ all_results <- bind_rows(all_results, NBE)
 
 all_results$Method <- c(method_names[all_results$Method])
 all_results$Method <- factor(all_results$Method,
-                                 levels = sort(unlist(method_names)))
+                                 levels = unlist(method_names))
 
 mape_sd <- function(truth, est) {
   sd(abs(est - truth)) / sqrt(length(truth))
@@ -131,7 +129,15 @@ densities_scores <- group_by(all_results, Method) %>%
 g <- ggplot(densities_scores) +
     geom_density(aes(x = Value, colour = Method), linewidth = 0.3) +
     facet_wrap(~Diagnostic, scales = "free") +
-    theme_bw()
+    theme_bw() +
+    scale_color_manual(values = c("MCMC" = "#1f77b4", 
+                                "NBE"  = "#ff7f0e", 
+                                "fKL"  = "#2ca02c", 
+                                "rKL1" = "#d62728", 
+                                "rKL2" = "#9467bd", 
+                                "rKL3" = "#8c564b", 
+                                "NRE"  = "#e377c2"),
+                               breaks = levels(densities_scores$Method))
 print(g)
 
 ggsave("fig/scores_densities.pdf", g, width = 7.2, height = 3)
@@ -147,7 +153,6 @@ my_xtable <- group_by(all_results, Method) %>%
             MIS90 = is90(lscale_true, Lower, Upper, summarise = summarise_method),
             COV90 = cov90(lscale_true, Lower, Upper)) %>%
    left_join(results_crps, by = "Method") %>%
-   arrange(RMSPE) %>%
 xtable(digits = 3)
 
 latex <- my_xtable %>%  print(include.rownames = FALSE, only.contents = TRUE)

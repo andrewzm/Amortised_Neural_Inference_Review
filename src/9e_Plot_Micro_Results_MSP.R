@@ -116,7 +116,7 @@ scatter_plots <- ggplot(samples_all) +
            theme_bw() +
            theme(text = element_text(size = 10),
                  legend.title = element_blank(),
-                 legend.position = "bottom")
+                 legend.position = "bottom") 
 
 # Extract the legend
 g <- ggplotGrob(scatter_plots)

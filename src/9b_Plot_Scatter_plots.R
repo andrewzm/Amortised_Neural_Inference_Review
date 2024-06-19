@@ -23,12 +23,12 @@ library(grid)
 test_lscales <- readRDS("data/test_params.rds")[1:1000,, ]
 preds <- list()
 method_names <- list(Metropolis_Hastings= "MCMC",
+                     NBE = "NBE",
                      BayesFlow = "fKL",
                      VB = "rKL1",
                      VB_Synthetic_Naive = "rKL2",
                      VB_Synthetic_MutualInf= "rKL3",
-                     NRE = "NRE",
-                     NBE = "NBE")
+                     NRE = "NRE")
 
 ## Methods that sample from the posterior
 for(method in c("Metropolis_Hastings", "BayesFlow", "VB",
@@ -50,7 +50,7 @@ point_summaries <- bind_rows(point_summaries, NBE[1:1000, ])
 
 point_summaries$Method <- c(method_names[point_summaries$Method])
 point_summaries$Method <- factor(point_summaries$Method,
-                                 levels = sort(unlist(method_names)))
+                                 levels = unlist(method_names))
 
 ## Now make facet grid of scatter plots for each method
 ## with identity line
@@ -70,7 +70,15 @@ p <- ggplot(point_summaries) +
     facet_wrap(~Method, nrow = 1)  +
     labs(tag = "(c)") +
     theme(plot.tag = element_text(face = "bold", size = 10),
-          plot.tag.position = c(0.02, 0.98))
+          plot.tag.position = c(0.02, 0.98)) +
+              scale_color_manual(values = c("MCMC" = "#1f77b4", 
+                                "NBE"  = "#ff7f0e", 
+                                "fKL"  = "#2ca02c", 
+                                "rKL1" = "#d62728", 
+                                "rKL2" = "#9467bd", 
+                                "rKL3" = "#8c564b", 
+                                "NRE"  = "#e377c2"),
+                               breaks = levels(samples_all$Method))
 
 # Extract the legend
 g <- ggplotGrob(p)
