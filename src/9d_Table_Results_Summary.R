@@ -122,9 +122,10 @@ g <- ggplot(all_results) +
 
 densities_scores <- group_by(all_results, Method) %>%
       transmute(SPE = (lscale_true - Est)^2,
-            APE = abs(lscale_true -  Est),
             IS90 = is90(lscale_true, Lower, Upper, summarise = I)) %>%
-       gather(Diagnostic, Value, -Method)
+       mutate(IS90 = as.numeric(IS90)) %>%
+       gather(Diagnostic, Value, -Method) %>%
+       mutate(Diagnostic = factor(Diagnostic, levels = c("SPE", "IS90")))
 
 g <- ggplot(densities_scores) +
     geom_density(aes(x = Value, colour = Method), linewidth = 0.3) +
@@ -147,15 +148,23 @@ results_crps$Method <- c(method_names[results_crps$Method])
 results_crps$Method <- factor(results_crps$Method,
                                  levels = sort(unlist(method_names)))
 
+
 my_xtable <- group_by(all_results, Method) %>%
   summarise(RMSPE = rmspe(lscale_true, Est, summarise = summarise_method),
-            MAPE = mae(lscale_true, Est, summarise = summarise_method),
             MIS90 = is90(lscale_true, Lower, Upper, summarise = summarise_method),
             COV90 = cov90(lscale_true, Lower, Upper)) %>%
    left_join(results_crps, by = "Method") %>%
-xtable(digits = 3)
+   select(1:3, 5, 4) %>%
+   rotate_df(cn = 1) %>%
+   xtable(digits = 2)
+my_xtable[1:4, ] <- my_xtable[1:4,] *100
+rownames(my_xtable)[1:3] <- paste(rownames(my_xtable)[1:3], "$(\\times 10^2)$")
+rownames(my_xtable)[4] <- paste(rownames(my_xtable)[4], "$(\\%)$")
+colnames(my_xtable) <- paste0("\\texttt{", colnames(my_xtable), "}")
 
-latex <- my_xtable %>%  print(include.rownames = FALSE, only.contents = TRUE)
+latex <- my_xtable %>%  print(include.rownames = TRUE, only.contents = TRUE, 
+                              sanitize.colnames.function = identity,
+                              sanitize.rownames.function = identity)
 latex_standalone <- my_xtable %>%  print()
 writeLines(
   c(
@@ -173,5 +182,13 @@ writeLines(latex, "fig/results_table.tex")
 tools::texi2pdf("fig/results_table_standalone.tex", clean = TRUE)
 file.rename(from = "results_table_standalone.pdf",
             to = "fig/results_table_standalone.pdf")
+
+
+
+
+
+
+
+
 
 
