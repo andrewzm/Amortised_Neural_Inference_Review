@@ -19,13 +19,13 @@ Note that each of these packages can be interfaced from R using [reticulate](htt
 We suggest that users set up a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) environment, so that the dependencies of this repository do not affect the user's current installation. In your environment, install `Python`, `R`, and `Julia`. An environment instruction that worked in our case was the following:
 
 ```
-conda create -n ARSIA -c conda-forge julia=1.9.4 r-base nlopt python tensorflow
+conda create -n ARSIA -c conda-forge julia=1.9.4 r-base nlopt python=3.9 tensorflow
 ```
 
-If you do not wish to use a conda environment, then install the software directly from the following websites:
+Please ensure the `R` version installed is >=4.4.0 and the `python` version installed is >=3.9. If you do not wish to use a conda environment, then install the software directly from the following websites:
 
 - Install [Julia 1.9.4](https://julialang.org/downloads/).
-- Install [R >= 4.0.0](https://www.r-project.org/).
+- Install [R >= 4.4.0](https://www.r-project.org/).
 - Install [Python >= 3.10.0](https://www.python.org/).
 
 Once `Julia`, `Python` and `R` are setup, install the `Julia` and `R` package dependencies by running the following commands from the top-level of the repository:
